@@ -1,33 +1,33 @@
 """
-CLI Adapter for Multi-Platform Support.
+多平台支持的 CLI 适配器。
 
-Abstracts differences between Claude Code, OpenCode, Cursor, iFlow, Codex, Kilo, Kiro Code, Gemini CLI, Antigravity, Windsurf, Qoder, CodeBuddy, GitHub Copilot, Factory Droid, and Pi Agent interfaces.
+抽象 Claude Code、OpenCode、Cursor、iFlow、Codex、Kilo、Kiro Code、Gemini CLI、Antigravity、Windsurf、Qoder、CodeBuddy、GitHub Copilot、Factory Droid 和 Pi Agent 接口之间的差异。
 
-Supported platforms:
-- claude: Claude Code (default)
+支持的平台:
+- claude: Claude Code（默认）
 - opencode: OpenCode
 - cursor: Cursor IDE
 - iflow: iFlow CLI
-- codex: Codex CLI (skills-based)
+- codex: Codex CLI（基于技能/skills）
 - kilo: Kilo CLI
-- kiro: Kiro Code (skills-based)
+- kiro: Kiro Code（基于技能/skills）
 - gemini: Gemini CLI
-- antigravity: Antigravity (workflow-based)
-- windsurf: Windsurf (workflow-based)
+- antigravity: Antigravity（基于工作流/workflow）
+- windsurf: Windsurf（基于工作流/workflow）
 - qoder: Qoder
 - codebuddy: CodeBuddy
-- copilot: GitHub Copilot (VS Code)
-- droid: Factory Droid (commands-based)
-- pi: Pi Agent (extension-backed)
+- copilot: GitHub Copilot（VS Code）
+- droid: Factory Droid（基于命令/commands）
+- pi: Pi Agent（扩展支持）
 
-Usage:
+用法:
     from common.cli_adapter import CLIAdapter
 
     adapter = CLIAdapter("opencode")
     cmd = adapter.build_run_command(
         agent="dispatch",
         session_id="abc123",
-        prompt="Start the pipeline"
+        prompt="启动流水线"
     )
 """
 
@@ -58,46 +58,46 @@ Platform = Literal[
 
 @dataclass
 class CLIAdapter:
-    """Adapter for different AI coding CLI tools."""
+    """不同 AI 编程 CLI 工具的适配器。"""
 
     platform: Platform
 
     # =========================================================================
-    # Agent Name Mapping
+    # Agent 名称映射
     # =========================================================================
 
-    # OpenCode has built-in agents that cannot be overridden
-    # See: https://github.com/sst/opencode/issues/4271
-    # Note: Class-level constant, not a dataclass field
+    # OpenCode 有内置 agent，无法覆盖
+    # 参见: https://github.com/sst/opencode/issues/4271
+    # 注意: 类级别常量，不是数据类字段
     _AGENT_NAME_MAP: ClassVar[dict[Platform, dict[str, str]]] = {
-        "claude": {},  # No mapping needed
+        "claude": {},  # 无需映射
         "opencode": {
-            "plan": "trellis-plan",  # 'plan' is built-in in OpenCode
+            "plan": "trellis-plan",  # 'plan' 在 OpenCode 中是内置的
         },
     }
 
     def get_agent_name(self, agent: str) -> str:
-        """Get platform-specific agent name.
+        """获取平台特定的 agent 名称。
 
-        Args:
-            agent: Original agent name (e.g., 'plan', 'dispatch')
+        参数:
+            agent: 原始 agent 名称（例如 'plan'、'dispatch'）
 
-        Returns:
-            Platform-specific agent name (e.g., 'trellis-plan' for OpenCode)
+        返回:
+            平台特定的 agent 名称（例如 OpenCode 的 'trellis-plan'）
         """
         mapping = self._AGENT_NAME_MAP.get(self.platform, {})
         return mapping.get(agent, agent)
 
     # =========================================================================
-    # Agent Path
+    # Agent 路径
     # =========================================================================
 
     @property
     def config_dir_name(self) -> str:
-        """Get platform-specific config directory name.
+        """获取平台特定的配置目录名。
 
-        Returns:
-            Directory name ('.claude', '.opencode', '.cursor', '.iflow', '.codex', '.kilocode', '.kiro', '.gemini', '.agent', '.windsurf', '.qoder', '.codebuddy', '.github/copilot', '.factory', or '.pi')
+        返回:
+            目录名（'.claude'、'.opencode'、'.cursor'、'.iflow'、'.codex'、'.kilocode'、'.kiro'、'.gemini'、'.agent'、'.windsurf'、'.qoder'、'.codebuddy'、'.github/copilot'、'.factory' 或 '.pi'）
         """
         if self.platform == "opencode":
             return ".opencode"
@@ -131,25 +131,25 @@ class CLIAdapter:
             return ".claude"
 
     def get_config_dir(self, project_root: Path) -> Path:
-        """Get platform-specific config directory.
+        """获取平台特定的配置目录。
 
-        Args:
-            project_root: Project root directory
+        参数:
+            project_root: 项目根目录
 
-        Returns:
-            Path to config directory (.claude, .opencode, .cursor, .iflow, .codex, .kilocode, .kiro, .gemini, .agent, .windsurf, .qoder, .codebuddy, .github/copilot, .factory, or .pi)
+        返回:
+            配置目录路径（.claude、.opencode、.cursor、.iflow、.codex、.kilocode、.kiro、.gemini、.agent、.windsurf、.qoder、.codebuddy、.github/copilot、.factory 或 .pi）
         """
         return project_root / self.config_dir_name
 
     def get_agent_path(self, agent: str, project_root: Path) -> Path:
-        """Get path to agent definition file.
+        """获取 agent 定义文件的路径。
 
-        Args:
-            agent: Agent name (original, before mapping)
-            project_root: Project root directory
+        参数:
+            agent: Agent 名称（原始名称，映射前）
+            project_root: 项目根目录
 
-        Returns:
-            Path to agent definition file (.md for most platforms, .toml for Codex)
+        返回:
+            Agent 定义文件路径（大多数平台使用 .md，Codex 使用 .toml）
         """
         mapped_name = self.get_agent_name(agent)
         if self.platform == "codex":
@@ -157,22 +157,22 @@ class CLIAdapter:
         return self.get_config_dir(project_root) / "agents" / f"{mapped_name}.md"
 
     def get_commands_path(self, project_root: Path, *parts: str) -> Path:
-        """Get path to commands directory or specific command file.
+        """获取命令（commands）目录或特定命令文件的路径。
 
-        Args:
-            project_root: Project root directory
-            *parts: Additional path parts (e.g., 'trellis', 'finish-work.md')
+        参数:
+            project_root: 项目根目录
+            *parts: 额外的路径部分（例如 'trellis'、'finish-work.md'）
 
-        Returns:
-            Path to commands directory or file
+        返回:
+            命令目录或文件路径
 
-        Note:
-            Cursor uses prefix naming: .cursor/commands/trellis-<name>.md
-            Antigravity uses workflow directory: .agent/workflows/<name>.md
-            Windsurf uses workflow directory: .windsurf/workflows/trellis-<name>.md
-            Copilot uses prompt files: .github/prompts/<name>.prompt.md
-            Pi uses prompt templates: .pi/prompts/trellis-<name>.md
-            Claude/OpenCode use subdirectory: .claude/commands/trellis/<name>.md
+        注意:
+            Cursor 使用前缀命名: .cursor/commands/trellis-<name>.md
+            Antigravity 使用工作流目录: .agent/workflows/<name>.md
+            Windsurf 使用工作流目录: .windsurf/workflows/trellis-<name>.md
+            Copilot 使用提示（prompt）文件: .github/prompts/<name>.prompt.md
+            Pi 使用提示模板: .pi/prompts/trellis-<name>.md
+            Claude/OpenCode 使用子目录: .claude/commands/trellis/<name>.md
         """
         if self.platform == "pi":
             prompts_dir = self.get_config_dir(project_root) / "prompts"
@@ -217,9 +217,9 @@ class CLIAdapter:
         if not parts:
             return self.get_config_dir(project_root) / "commands"
 
-        # Cursor uses prefix naming instead of subdirectory
+        # Cursor 使用前缀命名而非子目录
         if self.platform == "cursor" and len(parts) >= 2 and parts[0] == "trellis":
-            # Convert trellis/<name>.md to trellis-<name>.md
+            # 将 trellis/<name>.md 转换为 trellis-<name>.md
             filename = parts[-1]
             return (
                 self.get_config_dir(project_root) / "commands" / f"trellis-{filename}"
@@ -228,15 +228,15 @@ class CLIAdapter:
         return self.get_config_dir(project_root) / "commands" / Path(*parts)
 
     def get_trellis_command_path(self, name: str) -> str:
-        """Get relative path to a trellis command file.
+        """获取 trellis 命令文件的相对路径。
 
-        Args:
-            name: Command name without extension (e.g., 'finish-work', 'check')
+        参数:
+            name: 命令名称，不带扩展名（例如 'finish-work'、'check'）
 
-        Returns:
-            Relative path string for use in JSONL entries
+        返回:
+            用于 JSONL 条目的相对路径字符串
 
-        Note:
+        注意:
             Cursor: .cursor/commands/trellis-<name>.md
             Codex: .agents/skills/trellis-<name>/SKILL.md
             Kiro: .kiro/skills/trellis-<name>/SKILL.md
@@ -244,13 +244,13 @@ class CLIAdapter:
             Antigravity: .agent/workflows/<name>.md
             Windsurf: .windsurf/workflows/trellis-<name>.md
             Pi: .pi/prompts/trellis-<name>.md
-            Others: .{platform}/commands/trellis/<name>.md
+            其他: .{platform}/commands/trellis/<name>.md
         """
         if self.platform == "cursor":
             return f".cursor/commands/trellis-{name}.md"
         elif self.platform == "codex":
-            # 0.5.0-beta.0 renamed all skill dirs to add the `trellis-` prefix
-            # (see that release's manifest for the 60+ rename entries).
+            # 0.5.0-beta.0 将所有 skill 目录重命名为添加 `trellis-` 前缀
+            # （参见该版本的清单中的 60+ 重命名条目）。
             return f".agents/skills/trellis-{name}/SKILL.md"
         elif self.platform == "kiro":
             return f".kiro/skills/trellis-{name}/SKILL.md"
@@ -272,14 +272,14 @@ class CLIAdapter:
             return f"{self.config_dir_name}/commands/trellis/{name}.md"
 
     # =========================================================================
-    # Environment Variables
+    # 环境变量
     # =========================================================================
 
     def get_non_interactive_env(self) -> dict[str, str]:
-        """Get environment variables for non-interactive mode.
+        """获取非交互模式的环境变量。
 
-        Returns:
-            Dict of environment variables to set
+        返回:
+            要设置的环境变量 dict
         """
         if self.platform == "opencode":
             return {"OPENCODE_NON_INTERACTIVE": "1"}
@@ -290,7 +290,7 @@ class CLIAdapter:
         elif self.platform == "kiro":
             return {"KIRO_NON_INTERACTIVE": "1"}
         elif self.platform == "gemini":
-            return {}  # Gemini CLI doesn't have a non-interactive env var
+            return {}  # Gemini CLI 没有非交互式环境变量
         elif self.platform == "antigravity":
             return {}
         elif self.platform == "windsurf":
@@ -309,7 +309,7 @@ class CLIAdapter:
             return {"CLAUDE_NON_INTERACTIVE": "1"}
 
     # =========================================================================
-    # CLI Command Building
+    # CLI 命令构建
     # =========================================================================
 
     def build_run_command(
@@ -321,18 +321,18 @@ class CLIAdapter:
         verbose: bool = True,
         json_output: bool = True,
     ) -> list[str]:
-        """Build CLI command for running an agent.
+        """构建运行 agent 的 CLI 命令。
 
-        Args:
-            agent: Agent name (will be mapped if needed)
-            prompt: Prompt to send to the agent
-            session_id: Optional session ID (Claude Code only for creation)
-            skip_permissions: Whether to skip permission prompts
-            verbose: Whether to enable verbose output
-            json_output: Whether to use JSON output format
+        参数:
+            agent: Agent 名称（需要时会映射）
+            prompt: 发送给 agent 的提示
+            session_id: 可选的会话（session）ID（仅 Claude Code 创建时支持）
+            skip_permissions: 是否跳过权限提示
+            verbose: 是否启用详细输出
+            json_output: 是否使用 JSON 输出格式
 
-        Returns:
-            List of command arguments
+        返回:
+            命令参数列表
         """
         mapped_agent = self.get_agent_name(agent)
 
@@ -340,9 +340,9 @@ class CLIAdapter:
             cmd = ["opencode", "run"]
             cmd.extend(["--agent", mapped_agent])
 
-            # Note: OpenCode 'run' mode is non-interactive by default
-            # No equivalent to Claude Code's --dangerously-skip-permissions
-            # See: https://github.com/anomalyco/opencode/issues/9070
+            # 注意: OpenCode 'run' 模式默认是非交互式的
+            # 没有等价于 Claude Code 的 --dangerously-skip-permissions 的选项
+            # 参见: https://github.com/anomalyco/opencode/issues/9070
 
             if json_output:
                 cmd.extend(["--format", "json"])
@@ -350,8 +350,8 @@ class CLIAdapter:
             if verbose:
                 cmd.extend(["--log-level", "DEBUG", "--print-logs"])
 
-            # Note: OpenCode doesn't support --session-id on creation
-            # Session ID must be extracted from logs after startup
+            # 注意: OpenCode 不支持在创建时指定 --session-id
+            # Session ID 必须在启动后从日志中提取
 
             cmd.append(prompt)
 
@@ -368,25 +368,25 @@ class CLIAdapter:
             cmd.append(prompt)
         elif self.platform == "antigravity":
             raise ValueError(
-                "Antigravity workflows are UI slash commands; CLI agent run is not supported."
+                "Antigravity 工作流是 UI 斜杠命令；不支持 CLI agent 运行。"
             )
         elif self.platform == "windsurf":
             raise ValueError(
-                "Windsurf workflows are UI slash commands; CLI agent run is not supported."
+                "Windsurf 工作流是 UI 斜杠命令；不支持 CLI agent 运行。"
             )
         elif self.platform == "qoder":
             cmd = ["qodercli", "-p", prompt]
         elif self.platform == "codebuddy":
             raise ValueError(
-                "CodeBuddy does not support non-interactive mode (no CLI agent)"
+                "CodeBuddy 不支持非交互模式（无 CLI agent）"
             )
         elif self.platform == "copilot":
             raise ValueError(
-                "GitHub Copilot is IDE-only; CLI agent run is not supported."
+                "GitHub Copilot 仅限 IDE；不支持 CLI agent 运行。"
             )
         elif self.platform == "droid":
             raise ValueError(
-                "Factory Droid CLI agent run is not yet supported."
+                "Factory Droid CLI agent 运行尚不支持。"
             )
         elif self.platform == "pi":
             cmd = ["pi", "-p", prompt]
@@ -412,19 +412,19 @@ class CLIAdapter:
         return cmd
 
     def build_resume_command(self, session_id: str) -> list[str]:
-        """Build CLI command for resuming a session.
+        """构建恢复会话的 CLI 命令。
 
-        Args:
-            session_id: Session ID to resume (ignored for iFlow)
+        参数:
+            session_id: 要恢复的会话 ID（iFlow 忽略）
 
-        Returns:
-            List of command arguments
+        返回:
+            命令参数列表
         """
         if self.platform == "opencode":
             return ["opencode", "run", "--session", session_id]
         elif self.platform == "iflow":
-            # iFlow uses -c to continue most recent conversation
-            # session_id is ignored as iFlow doesn't support session IDs
+            # iFlow 使用 -c 继续最近的对话
+            # session_id 被忽略，因为 iFlow 不支持 session ID
             return ["iflow", "-c"]
         elif self.platform == "codex":
             return ["codex", "resume", session_id]
@@ -434,25 +434,25 @@ class CLIAdapter:
             return ["gemini", "--resume", session_id]
         elif self.platform == "antigravity":
             raise ValueError(
-                "Antigravity workflows are UI slash commands; CLI resume is not supported."
+                "Antigravity 工作流是 UI 斜杠命令；不支持 CLI 恢复。"
             )
         elif self.platform == "windsurf":
             raise ValueError(
-                "Windsurf workflows are UI slash commands; CLI resume is not supported."
+                "Windsurf 工作流是 UI 斜杠命令；不支持 CLI 恢复。"
             )
         elif self.platform == "qoder":
             return ["qodercli", "--resume", session_id]
         elif self.platform == "codebuddy":
             raise ValueError(
-                "CodeBuddy does not support non-interactive mode (no CLI agent)"
+                "CodeBuddy 不支持非交互模式（无 CLI agent）"
             )
         elif self.platform == "copilot":
             raise ValueError(
-                "GitHub Copilot is IDE-only; CLI resume is not supported."
+                "GitHub Copilot 仅限 IDE；不支持 CLI 恢复。"
             )
         elif self.platform == "droid":
             raise ValueError(
-                "Factory Droid CLI resume is not yet supported."
+                "Factory Droid CLI 恢复尚不支持。"
             )
         elif self.platform == "pi":
             return ["pi", "-c", session_id]
@@ -460,14 +460,14 @@ class CLIAdapter:
             return ["claude", "--resume", session_id]
 
     def get_resume_command_str(self, session_id: str, cwd: str | None = None) -> str:
-        """Get human-readable resume command string.
+        """获取人类可读的恢复命令字符串。
 
-        Args:
-            session_id: Session ID to resume
-            cwd: Optional working directory to cd into
+        参数:
+            session_id: 要恢复的会话 ID
+            cwd: 可选的工作目录，用于 cd 进入
 
-        Returns:
-            Command string for display
+        返回:
+            用于显示的命令字符串
         """
         cmd = self.build_resume_command(session_id)
         cmd_str = " ".join(cmd)
@@ -477,39 +477,39 @@ class CLIAdapter:
         return cmd_str
 
     # =========================================================================
-    # Platform Detection Helpers
+    # 平台检测辅助方法
     # =========================================================================
 
     @property
     def is_opencode(self) -> bool:
-        """Check if platform is OpenCode."""
+        """检查平台是否为 OpenCode。"""
         return self.platform == "opencode"
 
     @property
     def is_claude(self) -> bool:
-        """Check if platform is Claude Code."""
+        """检查平台是否为 Claude Code。"""
         return self.platform == "claude"
 
     @property
     def is_cursor(self) -> bool:
-        """Check if platform is Cursor."""
+        """检查平台是否为 Cursor。"""
         return self.platform == "cursor"
 
     @property
     def is_iflow(self) -> bool:
-        """Check if platform is iFlow CLI."""
+        """检查平台是否为 iFlow CLI。"""
         return self.platform == "iflow"
 
     @property
     def cli_name(self) -> str:
-        """Get CLI executable name.
+        """获取 CLI 可执行文件名。
 
-        Note: Cursor doesn't have a CLI tool, returns None-like value.
+        注意: Cursor 没有 CLI 工具，返回类似 None 的值。
         """
         if self.is_opencode:
             return "opencode"
         elif self.is_cursor:
-            return "cursor"  # Note: Cursor is IDE-only, no CLI
+            return "cursor"  # 注意: Cursor 仅限 IDE，无 CLI
         elif self.platform == "iflow":
             return "iflow"
         elif self.platform == "kiro":
@@ -535,50 +535,50 @@ class CLIAdapter:
 
     @property
     def supports_cli_agents(self) -> bool:
-        """Check if platform supports running agents via CLI.
+        """检查平台是否支持通过 CLI 运行 agent。
 
-        Claude Code, OpenCode, iFlow, and Codex support CLI agent execution.
-        Cursor is IDE-only and doesn't support CLI agents.
+        Claude Code、OpenCode、iFlow 和 Codex 支持 CLI agent 执行。
+        Cursor 仅限 IDE，不支持 CLI agent。
         """
         return self.platform in ("claude", "opencode", "iflow", "codex", "pi")
 
     @property
     def requires_agent_definition_file(self) -> bool:
-        """Check if platform requires an agent definition file (.md/.toml) to run.
+        """检查平台是否需要 agent 定义文件（.md/.toml）才能运行。
 
-        Claude Code, OpenCode, iFlow: require agent .md files (--agent flag).
-        Codex: auto-discovers agents from .codex/agents/*.toml, no --agent flag.
+        Claude Code、OpenCode、iFlow: 需要 agent .md 文件（--agent 标志）。
+        Codex: 从 .codex/agents/*.toml 自动发现 agent，不需要 --agent 标志。
         """
         return self.platform in ("claude", "opencode", "iflow")
 
     # =========================================================================
-    # Session ID Handling
+    # Session ID 处理
     # =========================================================================
 
     @property
     def supports_session_id_on_create(self) -> bool:
-        """Check if platform supports specifying session ID on creation.
+        """检查平台是否支持在创建时指定 session ID。
 
-        Claude Code: Yes (--session-id)
-        OpenCode: No (auto-generated, extract from logs)
-        iFlow: No (no session ID support)
+        Claude Code: 支持（--session-id）
+        OpenCode: 不支持（自动生成，从日志中提取）
+        iFlow: 不支持（无 session ID 支持）
         """
         return self.platform == "claude"
 
     def extract_session_id_from_log(self, log_content: str) -> str | None:
-        """Extract session ID from log output (OpenCode only).
+        """从日志输出中提取 session ID（仅 OpenCode）。
 
-        OpenCode generates session IDs in format: ses_xxx
+        OpenCode 生成的 session ID 格式: ses_xxx
 
-        Args:
-            log_content: Log file content
+        参数:
+            log_content: 日志文件内容
 
-        Returns:
-            Session ID if found, None otherwise
+        返回:
+            找到的 session ID，如果未找到则返回 None
         """
         import re
 
-        # OpenCode session ID pattern
+        # OpenCode session ID 正则模式
         match = re.search(r"ses_[a-zA-Z0-9]+", log_content)
         if match:
             return match.group(0)
@@ -586,21 +586,21 @@ class CLIAdapter:
 
 
 # =============================================================================
-# Factory Function
+# 工厂函数
 # =============================================================================
 
 
 def get_cli_adapter(platform: str = "claude") -> CLIAdapter:
-    """Get CLI adapter for the specified platform.
+    """获取指定平台的 CLI 适配器。
 
-    Args:
-        platform: Platform name ('claude', 'opencode', 'cursor', 'iflow', 'codex', 'kilo', 'kiro', 'gemini', 'antigravity', 'windsurf', 'qoder', 'codebuddy', 'copilot', 'droid', or 'pi')
+    参数:
+        platform: 平台名称（'claude'、'opencode'、'cursor'、'iflow'、'codex'、'kilo'、'kiro'、'gemini'、'antigravity'、'windsurf'、'qoder'、'codebuddy'、'copilot'、'droid' 或 'pi'）
 
-    Returns:
-        CLIAdapter instance
+    返回:
+        CLIAdapter 实例
 
-    Raises:
-        ValueError: If platform is not supported
+    抛出:
+        ValueError: 如果平台不受支持
     """
     if platform not in (
         "claude",
@@ -620,7 +620,7 @@ def get_cli_adapter(platform: str = "claude") -> CLIAdapter:
         "pi",
     ):
         raise ValueError(
-            f"Unsupported platform: {platform} (must be 'claude', 'opencode', 'cursor', 'iflow', 'codex', 'kilo', 'kiro', 'gemini', 'antigravity', 'windsurf', 'qoder', 'codebuddy', 'copilot', 'droid', or 'pi')"
+            f"不支持的平台: {platform}（必须是 'claude'、'opencode'、'cursor'、'iflow'、'codex'、'kilo'、'kiro'、'gemini'、'antigravity'、'windsurf'、'qoder'、'codebuddy'、'copilot'、'droid' 或 'pi'）"
         )
 
     return CLIAdapter(platform=platform)  # type: ignore
@@ -643,15 +643,15 @@ _ALL_PLATFORM_CONFIG_DIRS = (
     ".factory",
     ".pi",
 )
-"""Platform-specific config directory names used by detect_platform exclusion
-checks. `.agents/skills/` is NOT listed here: it is a shared cross-platform
-layer (written by Codex, also consumed by Amp/Cline/Warp/etc. via the
-agentskills.io standard), not a single-platform signal. Its presence must not
-block detection of Kiro, Antigravity, Windsurf, or other platforms."""
+"""由 detect_platform 排除检查使用的平台特定配置目录名。
+`.agents/skills/` 未在此列出：它是共享的跨平台层
+（由 Codex 写入，也通过 agentskills.io 标准被 Amp/Cline/Warp 等消费），
+不是单一平台信号。它的存在不应阻止 Kiro、Antigravity、Windsurf
+或其他平台的检测。"""
 
 
 def _has_other_platform_dir(project_root: Path, exclude: set[str]) -> bool:
-    """Check if any platform config dir exists besides those in *exclude*."""
+    """检查除了 *exclude* 中的目录外，是否存在任何平台配置目录。"""
     return any(
         (project_root / d).is_dir()
         for d in _ALL_PLATFORM_CONFIG_DIRS
@@ -660,33 +660,33 @@ def _has_other_platform_dir(project_root: Path, exclude: set[str]) -> bool:
 
 
 def detect_platform(project_root: Path) -> Platform:
-    """Auto-detect platform based on existing config directories.
+    """基于现有配置目录自动检测平台。
 
-    Detection order:
-    1. TRELLIS_PLATFORM environment variable (if set)
-    2. .opencode directory exists → opencode
-    3. .iflow directory exists → iflow
-    4. .cursor directory exists (without .claude) → cursor
-    5. .codex exists and no other platform dirs → codex
-    6. .kilocode directory exists → kilo
-    7. .kiro/skills exists and no other platform dirs → kiro
-    8. .gemini directory exists → gemini
-    9. .agent/workflows exists and no other platform dirs → antigravity
-    10. .windsurf/workflows exists and no other platform dirs → windsurf
-    11. .codebuddy directory exists → codebuddy
-    12. .qoder directory exists → qoder
-    13. .pi directory exists → pi
-    14. Default → claude
+    检测顺序:
+    1. TRELLIS_PLATFORM 环境变量（如果设置）
+    2. .opencode 目录存在 → opencode
+    3. .iflow 目录存在 → iflow
+    4. .cursor 目录存在（无 .claude）→ cursor
+    5. .codex 存在且无其他平台目录 → codex
+    6. .kilocode 目录存在 → kilo
+    7. .kiro/skills 存在且无其他平台目录 → kiro
+    8. .gemini 目录存在 → gemini
+    9. .agent/workflows 存在且无其他平台目录 → antigravity
+    10. .windsurf/workflows 存在且无其他平台目录 → windsurf
+    11. .codebuddy 目录存在 → codebuddy
+    12. .qoder 目录存在 → qoder
+    13. .pi 目录存在 → pi
+    14. 默认 → claude
 
-    Args:
-        project_root: Project root directory
+    参数:
+        project_root: 项目根目录
 
-    Returns:
-        Detected platform ('claude', 'opencode', 'cursor', 'iflow', 'codex', 'kilo', 'kiro', 'gemini', 'antigravity', 'windsurf', 'qoder', 'codebuddy', 'copilot', 'droid', 'pi', or default 'claude')
+    返回:
+        检测到的平台（'claude'、'opencode'、'cursor'、'iflow'、'codex'、'kilo'、'kiro'、'gemini'、'antigravity'、'windsurf'、'qoder'、'codebuddy'、'copilot'、'droid'、'pi' 或默认 'claude'）
     """
     import os
 
-    # Check environment variable first
+    # 首先检查环境变量
     env_platform = os.environ.get("TRELLIS_PLATFORM", "").lower()
     if env_platform in (
         "claude",
@@ -707,41 +707,41 @@ def detect_platform(project_root: Path) -> Platform:
     ):
         return env_platform  # type: ignore
 
-    # Check for .opencode directory (OpenCode-specific)
+    # 检查 .opencode 目录（OpenCode 专用）
     if (project_root / ".opencode").is_dir():
         return "opencode"
 
-    # Check for .iflow directory (iFlow-specific)
+    # 检查 .iflow 目录（iFlow 专用）
     if (project_root / ".iflow").is_dir():
         return "iflow"
 
-    # Check for .cursor directory (Cursor-specific)
-    # Only detect as cursor if .claude doesn't exist (to avoid confusion)
+    # 检查 .cursor 目录（Cursor 专用）
+    # 仅当 .claude 不存在时才检测为 cursor（避免混淆）
     if (project_root / ".cursor").is_dir() and not (project_root / ".claude").is_dir():
         return "cursor"
 
-    # Check for .gemini directory (Gemini CLI-specific)
+    # 检查 .gemini 目录（Gemini CLI 专用）
     if (project_root / ".gemini").is_dir():
         return "gemini"
 
-    # Check for .codex directory (Codex-specific)
-    # .agents/skills/ alone does NOT trigger codex detection (it's a shared standard)
+    # 检查 .codex 目录（Codex 专用）
+    # 仅 .agents/skills/ 不会触发 codex 检测（它是共享标准）
     if (project_root / ".codex").is_dir() and not _has_other_platform_dir(
         project_root, {".codex", ".agents"}
     ):
         return "codex"
 
-    # Check for .kilocode directory (Kilo-specific)
+    # 检查 .kilocode 目录（Kilo 专用）
     if (project_root / ".kilocode").is_dir():
         return "kilo"
 
-    # Check for Kiro skills directory only when no other platform config exists
+    # 仅当没有其他平台配置存在时才检查 Kiro skills 目录
     if (project_root / ".kiro" / "skills").is_dir() and not _has_other_platform_dir(
         project_root, {".kiro"}
     ):
         return "kiro"
 
-    # Check for Antigravity workflow directory only when no other platform config exists
+    # 仅当没有其他平台配置存在时才检查 Antigravity 工作流目录
     if (
         project_root / ".agent" / "workflows"
     ).is_dir() and not _has_other_platform_dir(
@@ -749,7 +749,7 @@ def detect_platform(project_root: Path) -> Platform:
     ):
         return "antigravity"
 
-    # Check for Windsurf workflow directory only when no other platform config exists
+    # 仅当没有其他平台配置存在时才检查 Windsurf 工作流目录
     if (
         project_root / ".windsurf" / "workflows"
     ).is_dir() and not _has_other_platform_dir(
@@ -757,33 +757,33 @@ def detect_platform(project_root: Path) -> Platform:
     ):
         return "windsurf"
 
-    # Check for .codebuddy directory (CodeBuddy-specific)
+    # 检查 .codebuddy 目录（CodeBuddy 专用）
     if (project_root / ".codebuddy").is_dir():
         return "codebuddy"
 
-    # Check for .qoder directory (Qoder-specific)
+    # 检查 .qoder 目录（Qoder 专用）
     if (project_root / ".qoder").is_dir():
         return "qoder"
 
-    # Check for .github/copilot directory (GitHub Copilot-specific)
+    # 检查 .github/copilot 目录（GitHub Copilot 专用）
     if (project_root / ".github" / "copilot").is_dir():
         return "copilot"
 
-    # Check for .factory directory (Factory Droid-specific)
+    # 检查 .factory 目录（Factory Droid 专用）
     if (project_root / ".factory").is_dir():
         return "droid"
 
-    # Check for .pi directory (Pi Agent-specific)
+    # 检查 .pi 目录（Pi Agent 专用）
     if (project_root / ".pi").is_dir():
         return "pi"
 
-    # Fallback: checkout only has the Codex shared-skills layer
-    # (.agents/skills/trellis-* dirs) and no explicit platform config dir.
-    # Happens on fresh clones where .codex/ is gitignored/absent but the
-    # shared skills were committed to git. Must guard against the case
-    # where .claude/ or any other platform dir also exists — .agents/skills/
-    # can legitimately coexist with any platform as a shared consumption
-    # layer for Amp/Cline/Warp/etc.
+    # 回退：checkout 只有 Codex 共享 skills 层
+    # （.agents/skills/trellis-* 目录）且没有显式平台配置目录。
+    # 发生在全新 clone 上，其中 .codex/ 被 gitignore/不存在，
+    # 但共享 skills 被提交到 git。必须防止 .claude/ 或任何其他
+    # 平台目录也同时存在的情况 — .agents/skills/
+    # 可以作为共享消费层与任何平台合法共存，
+    # 供 Amp/Cline/Warp 等使用。
     agents_skills = project_root / ".agents" / "skills"
     if agents_skills.is_dir() and not _has_other_platform_dir(
         project_root, set()
@@ -799,13 +799,13 @@ def detect_platform(project_root: Path) -> Platform:
 
 
 def get_cli_adapter_auto(project_root: Path) -> CLIAdapter:
-    """Get CLI adapter with auto-detected platform.
+    """获取自动检测平台的 CLI 适配器。
 
-    Args:
-        project_root: Project root directory
+    参数:
+        project_root: 项目根目录
 
-    Returns:
-        CLIAdapter instance for detected platform
+    返回:
+        检测到平台的 CLIAdapter 实例
     """
     platform = detect_platform(project_root)
     return CLIAdapter(platform=platform)

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Git and Session Context utilities.
+Git 和会话上下文工具。
 
-Entry shim — delegates to session_context and packages_context.
+入口适配层 — 委托给 session_context 和 packages_context。
 
-Provides:
-    output_json - Output context in JSON format
-    output_text - Output context in text format
+提供：
+    output_json - 以 JSON 格式输出上下文
+    output_text - 以文本格式输出上下文
 """
 
 from __future__ import annotations
@@ -35,39 +35,39 @@ from .workflow_phase import (
     resolve_effective_platform,
 )
 
-# Backward-compatible alias — external modules import this name
+# 向后兼容的别名 — 外部模块导入此名称
 _run_git_command = run_git
 
 
 # =============================================================================
-# Main Entry
+# 主入口
 # =============================================================================
 
 def main() -> None:
-    """CLI entry point."""
+    """CLI 入口点。"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Get Session Context for AI Agent")
+    parser = argparse.ArgumentParser(description="获取 AI 智能体（agent）的会话上下文")
     parser.add_argument(
         "--json",
         "-j",
         action="store_true",
-        help="Output in JSON format (works with any --mode)",
+        help="以 JSON 格式输出（适用于任何 --mode）",
     )
     parser.add_argument(
         "--mode",
         "-m",
         choices=["default", "record", "packages", "phase"],
         default="default",
-        help="Output mode: default (full context), record (for record-session), packages (package info only), phase (workflow step extraction)",
+        help="输出模式：default（完整上下文）、record（用于 record-session）、packages（仅软件包信息）、phase（工作流步骤提取）",
     )
     parser.add_argument(
         "--step",
-        help="Step id for --mode phase, e.g. 1.1, 2.2. Omit to get the Phase Index.",
+        help="用于 --mode phase 的步骤 ID，例如 1.1、2.2。省略则获取阶段（phase）索引。",
     )
     parser.add_argument(
         "--platform",
-        help="Platform name for --mode phase, e.g. cursor, claude-code. Filters platform-tagged blocks.",
+        help="用于 --mode phase 的平台名称，例如 cursor、claude-code。过滤带有平台标记的块。",
     )
 
     args = parser.parse_args()
@@ -86,9 +86,9 @@ def main() -> None:
         content = get_step(args.step) if args.step else get_phase_index()
         if not content.strip():
             if args.step:
-                parser.exit(2, f"Step not found: {args.step}\n")
+                parser.exit(2, f"未找到步骤：{args.step}\n")
             else:
-                parser.exit(2, "Phase Index section not found in workflow.md\n")
+                parser.exit(2, "在 workflow.md 中未找到阶段索引部分\n")
         if args.platform:
             effective = resolve_effective_platform(
                 args.platform, read_trellis_config()

@@ -1,51 +1,51 @@
-# Logging Guidelines
+# 日志记录指南
 
-> How logging is done in this project.
+> 本项目如何进行 logging（日志记录）。
 
 ---
 
-## Overview
+## 概述
 
 <!--
-Document your project's logging conventions here.
+在此处记录你项目的 logging（日志记录）惯例。
 
-Questions to answer:
-- What logging library do you use?
-- What are the log levels and when to use each?
-- What should be logged?
-- What should NOT be logged (PII, secrets)?
+需要回答的问题：
+- 你使用什么 logging（日志记录）库？
+- 日志级别有哪些，何时使用各个级别？
+- 什么应该被记录？
+- 什么不应该被记录（PII、密钥）？
 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Log Levels
+## 日志级别
 
-<!-- When to use each level: debug, info, warn, error -->
+<!-- 何时使用各个级别：debug、info、warn、error -->
 
-(To be filled by the team)
-
----
-
-## Structured Logging
-
-<!-- Log format, required fields -->
-
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## What to Log
+## 结构化日志记录
 
-<!-- Important events to log -->
+<!-- 日志格式、必需字段 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## What NOT to Log
+## 应该记录什么
 
-<!-- Sensitive data, PII, secrets -->
+<!-- 需要记录的重要事件 -->
 
-(To be filled by the team)
+（待团队填写）
+
+---
+
+## 不应该记录什么
+
+<!-- 敏感数据、PII、密钥 -->
+
+（待团队填写）

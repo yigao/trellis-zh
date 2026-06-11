@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""Linear sync hook for Trellis task lifecycle.
+"""Trellis 任务生命周期的 Linear 同步钩子。
 
-Syncs task events to Linear via the `linearis` CLI.
+通过 `linearis` CLI 将任务事件同步到 Linear。
 
-Usage (called automatically by task.py hooks):
+用法（由 task.py 钩子自动调用）：
     py -3 .trellis/scripts/hooks/linear_sync.py create
     py -3 .trellis/scripts/hooks/linear_sync.py start
     py -3 .trellis/scripts/hooks/linear_sync.py archive
 
-Manual usage:
-    TASK_JSON_PATH=.trellis/tasks/<name>/task.json py -3 .trellis/scripts/hooks/linear_sync.py sync
+手动用法：
+    TASK_JSON_PATH=.trellis/tasks/<名称>/task.json py -3 .trellis/scripts/hooks/linear_sync.py sync
 
-Environment:
-    TASK_JSON_PATH  - Absolute path to task.json (set by task.py)
+环境变量：
+    TASK_JSON_PATH  - task.json 的绝对路径（由 task.py 设置）
 
-Configuration:
-    .trellis/hooks.local.json  - Local config (gitignored), example:
+配置：
+    .trellis/hooks.local.json  - 本地配置（已 gitignore），示例：
     {
       "linear": {
         "team": "TEAM_KEY",
-        "project": "Project Name",
+        "project": "项目名称",
         "assignees": {
           "dev-name": "linear-user-id"
         }
@@ -35,21 +35,21 @@ import subprocess
 import sys
 from pathlib import Path
 
-# ─── Configuration ────────────────────────────────────────────────────────────
+# ─── 配置 ──────────────────────────────────────────────────────────────────────
 
-# Trellis priority → Linear priority (1=Urgent, 2=High, 3=Medium, 4=Low)
+# Trellis 优先级 → Linear 优先级（1=紧急、2=高、3=中、4=低）
 PRIORITY_MAP = {"P0": 1, "P1": 2, "P2": 3, "P3": 4}
 
-# Linear status names (must match your team's workflow)
+# Linear 状态名称（必须与您团队的工作流匹配）
 STATUS_IN_PROGRESS = "In Progress"
 STATUS_DONE = "Done"
 
 
 def _load_config() -> dict:
-    """Load local hook config from .trellis/hooks.local.json."""
+    """从 .trellis/hooks.local.json 加载本地钩子配置。"""
     task_json_path = os.environ.get("TASK_JSON_PATH", "")
     if task_json_path:
-        # Walk up from task.json to find .trellis/
+        # 从 task.json 向上查找 .trellis/ 目录
         trellis_dir = Path(task_json_path).parent.parent.parent
     else:
         trellis_dir = Path(".trellis")
@@ -69,13 +69,13 @@ TEAM = LINEAR_CFG.get("team", "")
 PROJECT = LINEAR_CFG.get("project", "")
 ASSIGNEE_MAP = LINEAR_CFG.get("assignees", {})
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── 辅助函数 ──────────────────────────────────────────────────────────────────
 
 
 def _read_task() -> tuple[dict, str]:
     path = os.environ.get("TASK_JSON_PATH", "")
     if not path:
-        print("TASK_JSON_PATH not set", file=sys.stderr)
+        print("TASK_JSON_PATH 未设置", file=sys.stderr)
         sys.exit(1)
     with open(path, encoding="utf-8") as f:
         return json.load(f), path
@@ -96,7 +96,7 @@ def _linearis(*args: str) -> dict | None:
         errors="replace",
     )
     if result.returncode != 0:
-        print(f"linearis error: {result.stderr.strip()}", file=sys.stderr)
+        print(f"linearis 错误：{result.stderr.strip()}", file=sys.stderr)
         sys.exit(1)
     stdout = result.stdout.strip()
     if stdout:
@@ -111,40 +111,40 @@ def _get_linear_issue(task: dict) -> str | None:
     return None
 
 
-# ─── Actions ──────────────────────────────────────────────────────────────────
+# ─── 操作 ──────────────────────────────────────────────────────────────────────
 
 
 def cmd_create() -> None:
     if not TEAM:
-        print("No linear.team configured in hooks.local.json", file=sys.stderr)
+        print("hooks.local.json 中未配置 linear.team", file=sys.stderr)
         sys.exit(1)
 
     task, path = _read_task()
 
-    # Skip if already linked
+    # 如果已关联则跳过
     if _get_linear_issue(task):
-        print(f"Already linked: {_get_linear_issue(task)}")
+        print(f"已关联：{_get_linear_issue(task)}")
         return
 
-    title = task.get("title") or task.get("name") or "Untitled"
+    title = task.get("title") or task.get("name") or "未命名"
     args = ["issues", "create", title, "--team", TEAM]
 
-    # Map priority
+    # 映射优先级
     priority = PRIORITY_MAP.get(task.get("priority", ""), 0)
     if priority:
         args.extend(["-p", str(priority)])
 
-    # Set project
+    # 设置项目
     if PROJECT:
         args.extend(["--project", PROJECT])
 
-    # Assign to Linear user
+    # 指派给 Linear 用户
     assignee = task.get("assignee", "")
     linear_user_id = ASSIGNEE_MAP.get(assignee)
     if linear_user_id:
         args.extend(["--assignee", linear_user_id])
 
-    # Link to parent's Linear issue if available
+    # 如果有父任务，关联到父任务的 Linear 工单
     parent_issue = _resolve_parent_linear_issue(task)
     if parent_issue:
         args.extend(["--parent-ticket", parent_issue])
@@ -155,7 +155,7 @@ def cmd_create() -> None:
             task["meta"] = {}
         task["meta"]["linear_issue"] = result["identifier"]
         _write_task(task, path)
-        print(f"Created Linear issue: {result['identifier']}")
+        print(f"已创建 Linear 工单：{result['identifier']}")
 
 
 def cmd_start() -> None:
@@ -164,7 +164,7 @@ def cmd_start() -> None:
     if not issue:
         return
     _linearis("issues", "update", issue, "-s", STATUS_IN_PROGRESS)
-    print(f"Updated {issue} -> {STATUS_IN_PROGRESS}")
+    print(f"已更新 {issue} -> {STATUS_IN_PROGRESS}")
     cmd_sync()
 
 
@@ -174,34 +174,34 @@ def cmd_archive() -> None:
     if not issue:
         return
     _linearis("issues", "update", issue, "-s", STATUS_DONE)
-    print(f"Updated {issue} -> {STATUS_DONE}")
+    print(f"已更新 {issue} -> {STATUS_DONE}")
 
 
 def cmd_sync() -> None:
-    """Sync prd.md content to Linear issue description."""
+    """将 prd.md 内容同步到 Linear 工单描述。"""
     task, _ = _read_task()
     issue = _get_linear_issue(task)
     if not issue:
-        print("No linear_issue in meta, run create first", file=sys.stderr)
+        print("meta 中没有 linear_issue，请先运行 create", file=sys.stderr)
         sys.exit(1)
 
-    # Find prd.md next to task.json
+    # 在 task.json 旁边查找 prd.md
     task_json_path = os.environ.get("TASK_JSON_PATH", "")
     prd_path = Path(task_json_path).parent / "prd.md"
     if not prd_path.is_file():
-        print(f"No prd.md found at {prd_path}", file=sys.stderr)
+        print(f"在 {prd_path} 未找到 prd.md", file=sys.stderr)
         sys.exit(1)
 
     description = prd_path.read_text(encoding="utf-8").strip()
     _linearis("issues", "update", issue, "-d", description)
-    print(f"Synced prd.md to {issue} description")
+    print(f"已将 prd.md 同步到 {issue} 描述")
 
 
-# ─── Parent Issue Resolution ─────────────────────────────────────────────────
+# ─── 父工单解析 ────────────────────────────────────────────────────────────────
 
 
 def _resolve_parent_linear_issue(task: dict) -> str | None:
-    """Find parent task's Linear issue identifier."""
+    """查找父任务的 Linear 工单标识符。"""
     parent_name = task.get("parent")
     if not parent_name:
         return None
@@ -224,7 +224,7 @@ def _resolve_parent_linear_issue(task: dict) -> str | None:
     return None
 
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# ─── 主入口 ─────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     action = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -238,6 +238,6 @@ if __name__ == "__main__":
     if fn:
         fn()
     else:
-        print(f"Unknown action: {action}", file=sys.stderr)
-        print(f"Valid actions: {', '.join(actions)}", file=sys.stderr)
+        print(f"未知操作：{action}", file=sys.stderr)
+        print(f"有效操作：{', '.join(actions)}", file=sys.stderr)
         sys.exit(1)

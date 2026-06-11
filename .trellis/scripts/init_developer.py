@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Initialize developer for workflow.
+为工作流初始化开发者。
 
-Usage:
-    py -3 init_developer.py <developer-name>
+用法：
+    py -3 init_developer.py <开发者名称>
 
-This creates:
-    - .trellis/.developer file with developer info
-    - .trellis/workspace/<name>/ directory structure
+此脚本会创建：
+    - .trellis/.developer 文件（包含开发者信息）
+    - .trellis/workspace/<名称>/ 目录结构
 """
 
 from __future__ import annotations
@@ -23,22 +23,22 @@ from common.developer import init_developer
 
 
 def main() -> None:
-    """CLI entry point."""
+    """命令行接口入口点。"""
     if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} <developer-name>")
+        print(f"用法：{sys.argv[0]} <开发者名称>")
         print()
-        print("Example:")
+        print("示例：")
         print(f"  {sys.argv[0]} john")
         sys.exit(1)
 
     name = sys.argv[1]
 
-    # Check if already initialized
+    # 检查是否已经初始化
     existing = get_developer()
     if existing:
-        print(f"Developer already initialized: {existing}")
+        print(f"开发者已经初始化：{existing}")
         print()
-        print(f"To reinitialize, remove {DIR_WORKFLOW}/{FILE_DEVELOPER} first")
+        print(f"如需重新初始化，请先删除 {DIR_WORKFLOW}/{FILE_DEVELOPER}")
         sys.exit(0)
 
     if init_developer(name):

@@ -1,13 +1,13 @@
 """
-Task data access layer.
+任务数据访问层。
 
-Single source of truth for loading and iterating task directories.
-Replaces scattered task.json parsing across 9+ files.
+加载和遍历任务目录的唯一数据源。
+替代了散落在 9+ 个文件中的 task.json 解析逻辑。
 
-Provides:
-    load_task          — Load a single task by directory path
-    iter_active_tasks  — Iterate all non-archived tasks (sorted)
-    get_all_statuses   — Get {dir_name: status} map for children progress
+提供：
+    load_task          — 按目录路径加载单个任务
+    iter_active_tasks  — 遍历所有活动（非归档）任务（已排序）
+    get_all_statuses   — 获取 {dir_name: status} 映射以计算子任务进度
 """
 
 from __future__ import annotations
@@ -21,13 +21,13 @@ from .types import TaskInfo
 
 
 def load_task(task_dir: Path) -> TaskInfo | None:
-    """Load task from a directory containing task.json.
+    """从包含 task.json 的目录加载任务。
 
     Args:
-        task_dir: Absolute path to the task directory.
+        task_dir: 任务目录的绝对路径。
 
     Returns:
-        TaskInfo if task.json exists and is valid, None otherwise.
+        如果 task.json 存在且有效则返回 TaskInfo，否则返回 None。
     """
     task_json = task_dir / FILE_TASK_JSON
     if not task_json.is_file():
@@ -52,15 +52,15 @@ def load_task(task_dir: Path) -> TaskInfo | None:
 
 
 def iter_active_tasks(tasks_dir: Path) -> Iterator[TaskInfo]:
-    """Iterate all active (non-archived) tasks, sorted by directory name.
+    """遍历所有活动（非归档）任务，按目录名排序。
 
-    Skips the "archive" directory and directories without valid task.json.
+    跳过 "archive" 目录以及没有有效 task.json 的目录。
 
     Args:
-        tasks_dir: Path to the tasks directory.
+        tasks_dir: 任务目录的路径。
 
     Yields:
-        TaskInfo for each valid task.
+        每个有效任务的 TaskInfo。
     """
     if not tasks_dir.is_dir():
         return
@@ -74,15 +74,15 @@ def iter_active_tasks(tasks_dir: Path) -> Iterator[TaskInfo]:
 
 
 def get_all_statuses(tasks_dir: Path) -> dict[str, str]:
-    """Get a {dir_name: status} mapping for all active tasks.
+    """获取所有活动任务的 {dir_name: status} 映射。
 
-    Useful for computing children progress without loading full TaskInfo.
+    用于在无需加载完整 TaskInfo 的情况下计算子任务进度。
 
     Args:
-        tasks_dir: Path to the tasks directory.
+        tasks_dir: 任务目录的路径。
 
     Returns:
-        Dict mapping directory names to status strings.
+        将目录名映射到状态字符串的字典。
     """
     return {t.dir_name: t.status for t in iter_active_tasks(tasks_dir)}
 
@@ -91,20 +91,20 @@ def children_progress(
     children: tuple[str, ...] | list[str],
     all_statuses: dict[str, str],
 ) -> str:
-    """Format children progress string like " [2/3 done]".
+    """格式化子任务进度字符串，如 " [2/3 done]"。
 
     Args:
-        children: List of child directory names.
-        all_statuses: Status map from get_all_statuses().
+        children: 子任务目录名列表。
+        all_statuses: 来自 get_all_statuses() 的状态映射。
 
     Returns:
-        Formatted string, or "" if no children.
+        格式化后的字符串；如果没有子任务则返回 ""。
     """
     if not children:
         return ""
-    # A child missing from active statuses has been archived (cmd_archive
-    # sets status=completed before moving the dir). Count it as done so
-    # parent progress doesn't regress when children are archived.
+    # 不在活动状态列表中的子任务表示已被归档（cmd_archive 在移动目录前
+    # 会将 status 设为 completed）。将其计入已完成，以免父任务进度
+    # 在子任务归档后出现倒退。
     done = sum(
         1 for c in children
         if c not in all_statuses or all_statuses.get(c) in ("completed", "done")

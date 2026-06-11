@@ -1,51 +1,51 @@
-# Error Handling
+# 错误处理
 
-> How errors are handled in this project.
+> 本项目如何处理 error（错误）。
 
 ---
 
-## Overview
+## 概述
 
 <!--
-Document your project's error handling conventions here.
+在此处记录你项目的 error handling（错误处理）惯例。
 
-Questions to answer:
-- What error types do you define?
-- How are errors propagated?
-- How are errors logged?
-- How are errors returned to clients?
+需要回答的问题：
+- 你定义了哪些错误类型？
+- 错误是如何传播的？
+- 错误是如何记录的？
+- 错误是如何返回给客户端的？
 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Error Types
+## 错误类型
 
-<!-- Custom error classes/types -->
+<!-- 自定义错误类/类型 -->
 
-(To be filled by the team)
-
----
-
-## Error Handling Patterns
-
-<!-- Try-catch patterns, error propagation -->
-
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## API Error Responses
+## 错误处理模式
 
-<!-- Standard error response format -->
+<!-- Try-catch pattern（模式）、错误传播 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Common Mistakes
+## API 错误响应
 
-<!-- Error handling mistakes your team has made -->
+<!-- 标准错误响应格式 -->
 
-(To be filled by the team)
+（待团队填写）
+
+---
+
+## 常见错误
+
+<!-- 你的团队曾经犯过的错误处理相关错误 -->
+
+（待团队填写）

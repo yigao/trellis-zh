@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Session-scoped active task resolution.
+"""会话范围内的活动任务解析。
 
-The user-facing concept is a single "active task". Trellis stores that pointer
-per AI session/window under `.trellis/.runtime/sessions/`; without a stable
-session key there is no active task.
+面向用户的概念是单一的"活动任务"。Trellis 将该指针（pointer）
+按 AI 会话/窗口存储在 `.trellis/.runtime/sessions/` 下；
+没有稳定的会话键就不存在活动任务。
 """
 
 from __future__ import annotations
@@ -80,7 +80,7 @@ _ENV_PLATFORM_ALIASES = {
 
 @dataclass(frozen=True)
 class ActiveTask:
-    """Resolved active task state."""
+    """已解析的活动任务状态。"""
 
     task_path: str | None
     source_type: str
@@ -89,7 +89,7 @@ class ActiveTask:
 
     @property
     def source(self) -> str:
-        """Human-readable source label."""
+        """人类可读的来源标签。"""
         if self.source_type == "session" and self.context_key:
             return f"session:{self.context_key}"
         if self.source_type == "session-fallback" and self.context_key:
@@ -98,7 +98,7 @@ class ActiveTask:
 
 
 def normalize_task_ref(task_ref: str) -> str:
-    """Normalize a task ref for stable storage and comparison."""
+    """规范化任务引用以便稳定地存储和比较。"""
     normalized = task_ref.strip()
     if not normalized:
         return ""
@@ -118,7 +118,7 @@ def normalize_task_ref(task_ref: str) -> str:
 
 
 def resolve_task_ref(task_ref: str, repo_root: Path) -> Path | None:
-    """Resolve a task ref to an absolute task directory."""
+    """将任务引用解析为绝对任务目录路径。"""
     normalized = normalize_task_ref(task_ref)
     if not normalized:
         return None
@@ -214,12 +214,12 @@ def _env_platform_name(platform_name: str | None) -> str | None:
 
 
 def _lookup_env_context_key(platform_name: str | None) -> str | None:
-    """Resolve a context key from platform-provided environment variables.
+    """从平台提供的环境变量中解析上下文键。
 
-    Hooks pass `TRELLIS_CONTEXT_ID` to subprocesses they launch, but an AI-run
-    shell command can only see session identity if the host platform exports it
-    in the command environment. These names are best-effort adapters; if none
-    are present, there is no session-scoped active task.
+    钩子（hook）向其启动的子进程传递 `TRELLIS_CONTEXT_ID`，但 AI 运行的
+    shell 命令只有在宿主平台将身份信息导出到命令环境中时才能看到会话身份。
+    这些名称是尽力适配的适配器；如果没有任何环境变量存在，
+    则没有会话范围的活动任务。
     """
     env_platform_name = _env_platform_name(platform_name)
 
@@ -349,13 +349,12 @@ def _matching_cursor_ticket_context_key(
 
 
 def _lookup_cursor_shell_ticket_context_key() -> str | None:
-    """Resolve Cursor conversation identity from a short-lived shell ticket.
+    """从短期 shell 票据中解析 Cursor 对话身份。
 
-    Cursor exposes `conversation_id` to `beforeShellExecution`, but does not
-    export it into the shell command environment. The Cursor hook writes a
-    short-lived ticket just before `task.py` runs. We accept a ticket only when
-    the current `task.py` subcommand matches and exactly one fresh context key
-    matches, which avoids cross-window pointer contamination.
+    Cursor 向 `beforeShellExecution` 暴露 `conversation_id`，但不将其
+    导出到 shell 命令环境中。Cursor 钩子在 `task.py` 运行前写入一个
+    短期票据。只有当当前 `task.py` 子命令匹配且恰好有一个新鲜上下文键
+    匹配时，我们才接受票据，以避免跨窗口指针污染。
     """
     repo_root = _find_repo_root_from_cwd()
     if repo_root is None:
@@ -381,10 +380,10 @@ def resolve_context_key(
     platform_input: dict[str, Any] | None = None,
     platform: str | None = None,
 ) -> str | None:
-    """Resolve a stable session/window context key, if one is available.
+    """解析稳定的会话/窗口上下文键（如果可用）。
 
-    `TRELLIS_CONTEXT_ID` is an explicit context-key override used by CLI
-    scripts and subprocesses. It does not store the task itself.
+    `TRELLIS_CONTEXT_ID` 是 CLI 脚本和子进程使用的显式上下文键覆盖。
+    它本身不存储任务。
     """
     override = _string_value(os.environ.get("TRELLIS_CONTEXT_ID"))
     if override:
@@ -470,14 +469,14 @@ def resolve_active_task(
     platform_input: dict[str, Any] | None = None,
     platform: str | None = None,
 ) -> ActiveTask:
-    """Resolve the active task from session runtime state only.
+    """仅从会话运行时状态中解析活动任务。
 
-    A stale session task is returned as stale. Missing context identity or a
-    missing/empty session context falls back to single-session inference: if
-    exactly one session file exists in the runtime, return its task with
-    source_type="session-fallback" — covers class-2 platform sub-agents (codex,
-    copilot, gemini, qoder) that don't inherit the parent's session id. ≥2
-    files or 0 files yield ActiveTask(None) — refuses to guess across windows.
+    过期的会话任务会标记为 stale 返回。缺少上下文身份或
+    缺失/空的会话上下文会回退到单会话推断：如果运行时中
+    恰好存在一个会话文件，则返回其任务，source_type="session-fallback"
+    — 覆盖不继承父会话 ID 的第二类平台子智能体（subagent）
+    （codex、copilot、gemini、qoder）。≥2 个文件或 0 个文件
+    则返回 ActiveTask(None) — 拒绝跨窗口猜测。
     """
     context_key = resolve_context_key(platform_input, platform)
     if context_key:
@@ -495,11 +494,11 @@ def resolve_active_task(
 
 
 def _resolve_single_session_fallback(repo_root: Path) -> ActiveTask | None:
-    """Return the task pointed at by the sole session file, if exactly one exists.
+    """如果恰好存在一个会话文件，返回该唯一会话文件指向的任务。
 
-    Used when context-key resolution fails (typical for class-2 platform
-    sub-agents). Returns None if 0 or ≥2 session files are present — refuses
-    to pick across windows so 04-21's multi-session isolation contract holds.
+    当上下文键解析失败时使用（典型的第二类平台子智能体场景）。
+    如果存在 0 个或 ≥2 个会话文件则返回 None — 拒绝跨窗口
+    选择，以保证 04-21 的多会话隔离约定生效。
     """
     sessions_dir = _runtime_sessions_dir(repo_root)
     if not sessions_dir.is_dir():
@@ -551,10 +550,10 @@ def set_active_task(
     platform_input: dict[str, Any] | None = None,
     platform: str | None = None,
 ) -> ActiveTask | None:
-    """Set the active task in session scope.
+    """在会话范围内设置活动任务。
 
-    Returns None when no context key is available; callers should surface a
-    user-facing error that explains how to provide session identity.
+    当没有可用的上下文键时返回 None；调用方应向用户显示错误，
+    说明如何提供会话身份。
     """
     canonical = _canonical_task_ref(task_path, repo_root)
     if canonical is None:
@@ -579,7 +578,7 @@ def clear_active_task(
     platform_input: dict[str, Any] | None = None,
     platform: str | None = None,
 ) -> ActiveTask:
-    """Clear the active task by deleting the current session context file."""
+    """通过删除当前会话上下文文件来清除活动任务。"""
     context_key = resolve_context_key(platform_input, platform)
     if not context_key:
         return ActiveTask(None, "none")
@@ -592,7 +591,7 @@ def clear_active_task(
 
 
 def clear_task_from_sessions(task_path: str, repo_root: Path) -> int:
-    """Delete all session runtime files that point at a task."""
+    """删除所有指向某个任务的活动会话运行时文件。"""
     target = _canonical_task_ref(task_path, repo_root) or normalize_task_ref(task_path)
     if not target:
         return 0
@@ -621,6 +620,6 @@ def get_current_task_source(
     platform_input: dict[str, Any] | None = None,
     platform: str | None = None,
 ) -> tuple[str, str | None, str | None]:
-    """Return (`source_type`, `context_key`, `task_path`) for compatibility."""
+    """返回 (`source_type`, `context_key`, `task_path`) 以保持兼容性。"""
     active = resolve_active_task(repo_root, platform_input, platform)
     return active.source_type, active.context_key, active.task_path

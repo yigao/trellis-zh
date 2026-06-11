@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-"""Trellis per-turn breadcrumb hook (UserPromptSubmit / BeforeAgent equivalent).
+"""Trellis 每轮面包屑（breadcrumb）钩子（hook）（等价于 UserPromptSubmit / BeforeAgent）。
 
-Runs on every user prompt. Resolves the active task through Trellis'
-session-aware active task resolver and emits a short <workflow-state>
-block reminding the main AI what task is active and its expected flow.
+每次用户输入提示词时运行。通过 Trellis 的会话（session）感知的活动任务
+（active task）解析器解析活动任务，并输出一个简短的 <workflow-state>
+块，提醒主 AI 当前活动任务及其预期工作流（workflow）。
 
-The emitted ``hookEventName`` field is platform-aware: most hosts expect
-``UserPromptSubmit`` (Claude Code naming, also accepted by Cursor / Qoder /
-CodeBuddy / Droid / Codex / Copilot wiring), but Gemini CLI 0.40.x renamed
-its per-turn event to ``BeforeAgent`` and its schema validator rejects the
-legacy name. ``_detect_platform`` picks the right value at runtime.
-Breadcrumb text is pulled exclusively from workflow.md
-[workflow-state:STATUS] tag blocks — workflow.md is the single source of
-truth. There are no fallback dicts in this script: when workflow.md is
-missing or a tag is absent, the breadcrumb degrades to a generic
-"Refer to workflow.md for current step." line so users see (and fix)
-the broken state instead of the hook silently masking it.
+输出的 ``hookEventName`` 字段是平台感知的：大多数宿主期望
+``UserPromptSubmit``（Claude Code 命名，也被 Cursor / Qoder /
+CodeBuddy / Droid / Codex / Copilot 的接线所接受），但 Gemini CLI 0.40.x
+将其每轮事件重命名为 ``BeforeAgent``，其 schema 验证器会拒绝旧名称。
+``_detect_platform`` 在运行时选择合适的值。
+面包屑文本完全从 workflow.md 的
+[workflow-state:STATUS] 标签块中提取 — workflow.md 是唯一真相来源。
+本脚本中没有回退字典：当 workflow.md 缺失或标签不存在时，面包屑会降级为
+通用的 "请参阅 workflow.md 了解当前步骤。" 行，让用户看到（并修复）
+损坏的状态，而不是让 hook 静默掩盖问题。
 
-Shared across all hook-capable platforms (Claude, Cursor, Codex, Qoder,
-CodeBuddy, Droid, Gemini, Copilot). Kiro is not wired (no per-turn
-hook entry point). Written to each platform's hooks directory via
-writeSharedHooks() at init time.
+在所有支持 hook 的平台上共享（Claude、Cursor、Codex、Qoder、
+CodeBuddy、Droid、Gemini、Copilot）。Kiro 未接入（没有每轮
+hook 入口点）。在初始化时通过 writeSharedHooks() 写入各平台的
+hooks 目录。
 
-Silent exit 0 cases (no output):
-  - No .trellis/ directory found (not a Trellis project)
-  - task.json malformed or missing status
+静默退出 0 的情况（无输出）：
+  - 未找到 .trellis/ 目录（非 Trellis 项目）
+  - task.json 格式错误或缺少 status
 """
 from __future__ import annotations
 
@@ -34,11 +33,11 @@ import re
 import sys
 from pathlib import Path
 
-# Force UTF-8 on stdin/stdout/stderr on Windows. Default codepage there is
-# cp936 / cp1252 / etc. — non-ASCII content (Chinese task names, prd snippets)
-# both in stdin (hook payload from host CLI) and stdout (our emitted blocks)
-# raises UnicodeDecodeError / UnicodeEncodeError. Equivalent to `python -X utf8`
-# but applied per-stream so we don't depend on host CLI's command wiring.
+# 在 Windows 上强制 stdin/stdout/stderr 使用 UTF-8。默认编码页是
+# cp936 / cp1252 等 — 非 ASCII 内容（中文任务名、prd 片段）
+# 在 stdin（来自宿主 CLI 的 hook 负载）和 stdout（我们输出的块）
+# 上都会引发 UnicodeDecodeError / UnicodeEncodeError。等价于 `python -X utf8`
+# 但按流逐一应用，这样就不依赖宿主 CLI 的命令接线方式。
 if sys.platform.startswith("win"):
     import io as _io
     for _stream_name in ("stdin", "stdout", "stderr"):
@@ -59,55 +58,54 @@ from typing import Optional
 
 
 CODEX_SUB_AGENT_NOTICE = """<sub-agent-notice>
-SUB-AGENT NOTICE - READ FIRST IF SPAWNED VIA spawn_agent
+子智能体通知 — 如果通过 spawn_agent 派生，请先阅读
 
-If your parent session spawned you via spawn_agent with an explicit task
-message above this hook output, that message is your only job.
-- Execute the parent message exactly as written, then return.
-- Ignore all Trellis workflow guidance below this notice.
-- Do NOT call task.py start, task.py add-context, or task.py archive.
-- Do NOT call wait_agent or spawn_agent.
-- Do NOT modify .trellis/tasks/* or any other file unless the parent message
-  explicitly asks for that.
+如果你的父会话（session）通过 spawn_agent 派生你，并附带了显式的任务
+消息（在此 hook 输出上方），那条消息就是你唯一的工作。
+- 严格按照父消息的内容执行，然后返回。
+- 忽略此通知下方的所有 Trellis 工作流指引。
+- 不要调用 task.py start、task.py add-context 或 task.py archive。
+- 不要调用 wait_agent 或 spawn_agent。
+- 不要修改 .trellis/tasks/* 或任何其他文件，除非父消息
+  明确要求这样做。
 
-If you are the main interactive Codex session and the user is typing at the
-terminal with no parent agent, use the workflow guidance below normally.
+如果你是主交互式 Codex 会话，且用户正在终端输入（无父智能体），
+则正常使用下方的工作流指引。
 </sub-agent-notice>"""
 
 
-# Bootstrap notice for Codex while the session has no active task. Replaces the
-# heavyweight SessionStart context injection — instead of pushing 9.5 KB of
-# workflow text up front, we just nudge the AI to read the `trellis-start` skill once.
-# The nudge keeps showing up while status == "no_task" (cheap text, AI won't
-# re-read after the first time). Once a task is created the breadcrumb status
-# flips and this notice stops appearing automatically. Sub-agents are warded
-# off by the <sub-agent-notice> above plus the explicit exemption below.
+# Codex 无活动任务时的引导（bootstrap）通知。替代了重量级的
+# SessionStart 上下文注入（context injection）— 不直接推送 9.5 KB 的
+# 工作流文本，而是轻轻提醒 AI 去读取一次 `trellis-start` skill。
+# 当 status == "no_task" 时此提醒会持续显示（文本量小，AI 读一次后
+# 不会再重复读取）。一旦创建任务，面包屑状态会翻转，此通知自动消失。
+# 子智能体通过上方的 <sub-agent-notice> 和下文的显式豁免被排除。
 CODEX_NO_TASK_BOOTSTRAP_NOTICE = """<trellis-bootstrap>
-You are running in a Trellis-managed Codex session and there is no active task yet.
-If you have not already loaded Trellis context this session, read the `trellis-start` skill once:
+你正在 Trellis 管理的 Codex 会话中运行，当前没有活动任务。
+如果你在本会话中尚未加载 Trellis 上下文，请先读取一次 `trellis-start` skill：
 
   $trellis-start
 
-(equivalent to reading `.agents/skills/trellis-start/SKILL.md` and following its Steps 1-3)
+（等价于读取 `.agents/skills/trellis-start/SKILL.md` 并执行其步骤 1-3）
 
-The skill walks you through workflow.md, dev profile, git status, active tasks, and spec
-indexes. Then route the user's request per the <workflow-state> A/B/C rules below.
+该 skill 带你了解 workflow.md、开发者（developer）资料、git 状态、活动任务和 spec
+索引。然后按照下方的 <workflow-state> A/B/C 规则处理用户请求。
 
-Sub-agent exemption: if you are a sub-agent (spawned via spawn_agent with a parent task
-message), DO NOT read `$trellis-start`. Execute the parent message directly as instructed by the
-<sub-agent-notice> above.
+子智能体豁免：如果你是子智能体（通过 spawn_agent 派生，带有父任务
+消息），请不要读取 `$trellis-start`。按上方的
+<sub-agent-notice> 指示直接执行父消息。
 </trellis-bootstrap>"""
 
 
 # ---------------------------------------------------------------------------
-# CWD-robust Trellis root discovery (fixes hook-path-robustness for this hook)
+# CWD 健壮的 Trellis 根目录发现（修复本 hook 的 hook 路径健壮性）
 # ---------------------------------------------------------------------------
 
 def find_trellis_root(start: Path) -> Optional[Path]:
-    """Walk up from start to find directory containing .trellis/.
+    """从 start 向上遍历，找到包含 .trellis/ 的目录。
 
-    Handles CWD drift: subdirectory launches, monorepo packages, etc.
-    Returns None if no .trellis/ found (silent no-op).
+    处理 CWD 偏移：子目录启动、monorepo 软件包等场景。
+    未找到 .trellis/ 则返回 None（静默无操作）。
     """
     cur = start.resolve()
     while cur != cur.parent:
@@ -118,7 +116,7 @@ def find_trellis_root(start: Path) -> Optional[Path]:
 
 
 # ---------------------------------------------------------------------------
-# Active task discovery
+# 活动任务发现
 # ---------------------------------------------------------------------------
 
 def _detect_platform(input_data: dict) -> str | None:
@@ -167,7 +165,7 @@ def _resolve_active_task(root: Path, input_data: dict):
 
 
 def get_active_task(root: Path, input_data: dict) -> Optional[tuple[str, str, str]]:
-    """Return (task_id, status, source) from the current active task."""
+    """从当前活动任务返回 (task_id, status, source)。"""
     active = _resolve_active_task(root, input_data)
     if not active.task_path:
         return None
@@ -194,24 +192,23 @@ def get_active_task(root: Path, input_data: dict) -> Optional[tuple[str, str, st
 
 
 # ---------------------------------------------------------------------------
-# Breadcrumb loading: parse workflow.md, fall back to hardcoded defaults
+# 面包屑加载：解析 workflow.md
 # ---------------------------------------------------------------------------
 
-# Supports STATUS values with letters, digits, underscores, hyphens
-# (so "in-review" / "blocked-by-team" work alongside "in_progress").
+# 支持包含字母、数字、下划线、连字符的 STATUS 值
+# （所以 "in-review" / "blocked-by-team" 可以和 "in_progress" 一起使用）。
 _TAG_RE = re.compile(
     r"\[workflow-state:([A-Za-z0-9_-]+)\]\s*\n(.*?)\n\s*\[/workflow-state:\1\]",
     re.DOTALL,
 )
 
 def load_breadcrumbs(root: Path) -> dict[str, str]:
-    """Parse workflow.md for [workflow-state:STATUS] blocks.
+    """解析 workflow.md 中的 [workflow-state:STATUS] 块。
 
-    Returns {status: body_text}. workflow.md is the single source of
-    truth — there are no fallback dicts in this script. Missing tags
-    (or a missing/unreadable workflow.md) fall back to a generic line
-    in build_breadcrumb so users see the broken state and fix
-    workflow.md, rather than the hook silently masking the issue.
+    返回值 {status: body_text}。workflow.md 是唯一真相来源 —
+    本脚本中没有回退字典。缺失标签（或 workflow.md 缺失/不可读）
+    会在 build_breadcrumb 中回退为通用行，让用户看到损坏的状态并修复
+    workflow.md，而不是让 hook 静默掩盖问题。
     """
     workflow = root / ".trellis" / "workflow.md"
     if not workflow.is_file():
@@ -231,10 +228,10 @@ def load_breadcrumbs(root: Path) -> dict[str, str]:
 
 
 def _read_trellis_config(root: Path) -> dict:
-    """Load .trellis/config.yaml via the bundled trellis_config helper.
+    """通过内置的 trellis_config 助手加载 .trellis/config.yaml。
 
-    The helper lives in .trellis/scripts/common; the hook lives outside the
-    scripts tree, so we extend sys.path before importing.
+    助手位于 .trellis/scripts/common；本 hook 位于 scripts 树之外，
+    因此我们在导入前扩展 sys.path。
     """
     scripts_dir = root / ".trellis" / "scripts"
     if str(scripts_dir) not in sys.path:
@@ -250,15 +247,13 @@ def _read_trellis_config(root: Path) -> dict:
 
 
 def _codex_mode_banner(config: dict) -> str:
-    """Emit a `<codex-mode>` banner for the additionalContext payload.
+    """为 additionalContext 负载生成 `<codex-mode>` 横幅。
 
-    Reads `codex.dispatch_mode` from .trellis/config.yaml; defaults to
-    `inline` when missing or invalid because Codex sub-agents run with
-    `fork_turns="none"` isolation and can't inherit the parent session's
-    task context. The banner makes the active mode explicit to Codex AI
-    per turn, complementing the workflow-state body which is per-status.
-    Mode tells AI which dispatch protocol to follow; workflow-state tells
-    AI what step it's at.
+    从 .trellis/config.yaml 读取 `codex.dispatch_mode`；缺失或无效时
+    默认值为 `inline`，因为 Codex 子智能体以 ``fork_turns="none"`` 隔离
+    运行，无法继承父会话的任务上下文。横幅使 Codex AI 每轮都能明确
+    当前模式，与按状态划分的 workflow-state 正文互补。
+    模式告诉 AI 遵循哪种调度协议；workflow-state 告诉 AI 处于哪一步。
     """
     mode = "inline"
     if isinstance(config, dict):
@@ -273,15 +268,14 @@ def _codex_mode_banner(config: dict) -> str:
 def resolve_breadcrumb_key(
     status: str, platform: str | None, config: dict
 ) -> str:
-    """Pick the breadcrumb tag key based on Codex dispatch_mode.
+    """基于 Codex dispatch_mode 选择面包屑标签键。
 
-    Codex defaults to ``inline`` because sub-agents run with ``fork_turns="none"``
-    isolation and can't inherit the parent session's task context. Users can
-    opt into ``codex.dispatch_mode: sub-agent`` in ``.trellis/config.yaml``
-    to use the parallel ``<status>-inline`` tag → ``<status>`` flip. Invalid
-    or missing values fall back to inline.
+    Codex 默认使用 ``inline``，因为子智能体以 ``fork_turns="none"`` 隔离
+    运行，无法继承父会话的任务上下文。用户可以在 ``.trellis/config.yaml``
+    中通过 ``codex.dispatch_mode: sub-agent`` 选择使用并行的
+    ``<status>-inline`` 标签 → ``<status>`` 翻转。无效或缺失的值回退到 inline。
 
-    Non-codex platforms return the plain status unchanged.
+    非 Codex 平台直接返回原始 status。
     """
     if platform == "codex":
         mode = "inline"
@@ -302,27 +296,27 @@ def build_breadcrumb(
     source: str | None = None,
     breadcrumb_key: str | None = None,
 ) -> str:
-    """Build the <workflow-state>...</workflow-state> block.
+    """构建 <workflow-state>...</workflow-state> 块。
 
-    - Known status (tag present in workflow.md) → detailed template body
-    - Unknown status (no tag, or workflow.md missing) → generic
-      "Refer to workflow.md for current step." line
-    - `no_task` pseudo-status (task_id is None) → header omits task info
+    - 已知状态（workflow.md 中存在标签）→ 详细模板正文
+    - 未知状态（无标签，或 workflow.md 缺失）→ 通用
+      "请参阅 workflow.md 了解当前步骤。" 行
+    - `no_task` 伪状态（task_id 为 None）→ 标题省略任务信息
     """
     lookup_key = breadcrumb_key or status
     body = templates.get(lookup_key)
     if body is None and lookup_key != status:
         body = templates.get(status)
     if body is None:
-        body = "Refer to workflow.md for current step."
-    header = f"Status: {status}" if task_id is None else f"Task: {task_id} ({status})"
+        body = "请参阅 workflow.md 了解当前步骤。"
+    header = f"状态: {status}" if task_id is None else f"任务: {task_id} ({status})"
     if source:
-        header = f"{header}\nSource: {source}"
+        header = f"{header}\n来源: {source}"
     return f"<workflow-state>\n{header}\n{body}\n</workflow-state>"
 
 
 # ---------------------------------------------------------------------------
-# Entry
+# 入口
 # ---------------------------------------------------------------------------
 
 def main() -> int:
@@ -339,15 +333,15 @@ def main() -> int:
 
     root = find_trellis_root(cwd)
     if root is None:
-        return 0  # not a Trellis project
+        return 0  # 非 Trellis 项目
 
     templates = load_breadcrumbs(root)
     platform = _detect_platform(data)
     config = _read_trellis_config(root)
     task = get_active_task(root, data)
     if task is None:
-        # No active task — still emit a breadcrumb nudging AI toward
-        # trellis-brainstorm + task.py create when user describes real work.
+        # 无活动任务 — 仍然输出面包屑，提示 AI 在用户描述实际工作时
+        # 使用 trellis-brainstorm + task.py create。
         no_task_key = resolve_breadcrumb_key("no_task", platform, config)
         breadcrumb = build_breadcrumb(
             None, "no_task", templates, breadcrumb_key=no_task_key
@@ -366,9 +360,9 @@ def main() -> int:
         parts.append(breadcrumb)
         breadcrumb = "\n\n".join(parts)
 
-    # Gemini CLI 0.40.x rejects "UserPromptSubmit" — its per-turn event is
-    # named "BeforeAgent". Other platforms (Claude/Cursor/Qoder/CodeBuddy/
-    # Droid/Codex/Copilot) accept the original Claude-style name.
+    # Gemini CLI 0.40.x 拒绝 "UserPromptSubmit" — 其每轮事件命名为
+    # "BeforeAgent"。其他平台（Claude/Cursor/Qoder/CodeBuddy/
+    # Droid/Codex/Copilot）接受原始的 Claude 风格命名。
     hook_event_name = (
         "BeforeAgent" if platform == "gemini" else "UserPromptSubmit"
     )

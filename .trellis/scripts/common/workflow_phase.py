@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Workflow Phase Extraction.
+工作流（Workflow）阶段提取。
 
-Extracts step-level content from .trellis/workflow.md and optionally filters
-platform-specific blocks.
+从 .trellis/workflow.md 中提取步骤级别的内容，并可选择性地过滤
+平台特定块。
 
-Platform marker syntax in workflow.md:
+workflow.md 中的平台标记语法:
 
     [Claude Code, Cursor, ...]
-    agent-capable content
+    智能体（agent）可用的内容
     [/Claude Code, Cursor, ...]
 
-Provides:
-    get_phase_index   - Extract the Phase Index section (no --step)
-    get_step          - Extract a single step (#### X.X) section
-    filter_platform   - Strip platform blocks that don't include the given name
+提供:
+    get_phase_index   - 提取 Phase Index 部分（无 --step）
+    get_step          - 提取单个步骤（#### X.X）部分
+    filter_platform   - 移除不包含给定平台名称的平台块
 """
 
 from __future__ import annotations
@@ -28,28 +28,28 @@ from .paths import DIR_WORKFLOW, get_repo_root
 def _workflow_md_path():
     return get_repo_root() / DIR_WORKFLOW / "workflow.md"
 
-# Match a line that *is* a platform marker: "[A, B, C]" or "[/A, B, C]"
+# 匹配平台标记行: "[A, B, C]" 或 "[/A, B, C]"
 _MARKER_RE = re.compile(r"^\[(/?)([A-Za-z][^\[\]]*)\]\s*$")
 
-# Step heading: "#### 1.0 Title" or "#### 1.0 ..."
+# 步骤标题: "#### 1.0 Title" 或 "#### 1.0 ..."
 _STEP_HEADING_RE = re.compile(r"^####\s+(\d+\.\d+)\b.*$")
 
-# Phase Index starts here; Phase 1/2/3 step bodies follow; ends at Breadcrumbs.
+# Phase Index 从这里开始；Phase 1/2/3 步骤主体跟随；在 Breadcrumbs 处结束。
 _PHASE_INDEX_HEADING = "## Phase Index"
 
 
 def _read_workflow() -> str:
     path = _workflow_md_path()
     if not path.exists():
-        raise FileNotFoundError(f"workflow.md not found: {path}")
+        raise FileNotFoundError(f"workflow.md 未找到: {path}")
     return path.read_text(encoding="utf-8")
 
 
 def _parse_marker(line: str) -> tuple[bool, list[str]] | None:
-    """Parse a platform marker line.
+    """解析平台标记行。
 
-    Returns:
-        (is_closing, [platform_names]) if line is a marker, else None.
+    返回:
+        (is_closing, [platform_names]) 如果该行是标记，否则返回 None。
     """
     m = _MARKER_RE.match(line)
     if not m:
@@ -60,15 +60,14 @@ def _parse_marker(line: str) -> tuple[bool, list[str]] | None:
 
 
 def get_phase_index() -> str:
-    """Return Phase Index + Phase 1/2/3 step bodies from workflow.md.
+    """从 workflow.md 返回 Phase Index + Phase 1/2/3 步骤主体。
 
-    Matches what the SessionStart hook injects into the `<workflow>` block:
-    starts at `## Phase Index`, continues through `## Phase 1: Plan`,
-    `## Phase 2: Execute`, `## Phase 3: Finish`, stops at
-    `## Customizing Trellis (for forks)` (the docs-for-forks footer).
-    `[workflow-state:STATUS]` tag blocks (now embedded in Phase Index since
-    v0.5.0-rc.0) are consumed by the UserPromptSubmit hook so they're
-    stripped from this output.
+    匹配 SessionStart 钩子（hook）注入到 `<workflow>` 块中的内容:
+    从 `## Phase Index` 开始，经过 `## Phase 1: Plan`、
+    `## Phase 2: Execute`、`## Phase 3: Finish`，
+    在 `## Customizing Trellis (for forks)`（面向 fork 的文档页脚）处停止。
+    `[workflow-state:STATUS]` 标签块（自 v0.5.0-rc.0 起嵌入在 Phase Index 中）
+    由 UserPromptSubmit hook 消费，因此从此输出中剥离。
     """
     text = _read_workflow()
     lines = text.splitlines()
@@ -90,8 +89,8 @@ def get_phase_index() -> str:
         end = len(lines)
 
     section = "\n".join(lines[start:end]).rstrip()
-    # Strip [workflow-state:STATUS]...[/workflow-state:STATUS] blocks since
-    # they're injected separately by inject-workflow-state.py per-turn.
+    # 剥离 [workflow-state:STATUS]...[/workflow-state:STATUS] 块，
+    # 因为它们由 inject-workflow-state.py 每轮单独注入。
     import re as _re
     tag_re = _re.compile(
         r"\[workflow-state:([A-Za-z0-9_-]+)\]\s*\n.*?\n\s*\[/workflow-state:\1\]\n?",
@@ -101,9 +100,9 @@ def get_phase_index() -> str:
 
 
 def get_step(step_id: str) -> str:
-    """Return the `#### X.X` section matching step_id (header + body).
+    """返回匹配 step_id 的 `#### X.X` 部分（标题 + 主体）。
 
-    Body ends at the next `####` or `---` or `##` heading (whichever comes first).
+    主体在下一个 `####` 或 `---` 或 `##` 标题处结束（以先出现者为准）。
     """
     text = _read_workflow()
     lines = text.splitlines()
@@ -126,7 +125,7 @@ def get_step(step_id: str) -> str:
         if line.startswith("## "):
             end = j
             break
-        # Horizontal rule at column 0
+        # 第 0 列的水平分割线
         if line.strip() == "---":
             end = j
             break
@@ -135,7 +134,7 @@ def get_step(step_id: str) -> str:
 
 
 def _platform_matches(platform: str, block_names: list[str]) -> bool:
-    """Case-insensitive fuzzy match: accept 'cursor', 'Cursor', 'claude-code', 'Claude Code'."""
+    """不区分大小写的模糊匹配: 接受 'cursor'、'Cursor'、'claude-code'、'Claude Code'。"""
     needle = platform.lower().replace("-", "").replace("_", "").replace(" ", "")
     for name in block_names:
         hay = name.lower().replace("-", "").replace("_", "").replace(" ", "")
@@ -145,20 +144,20 @@ def _platform_matches(platform: str, block_names: list[str]) -> bool:
 
 
 def resolve_effective_platform(platform: str, config: dict) -> str:
-    """Map ``codex`` to a dispatch-mode-namespaced virtual platform name.
+    """将 ``codex`` 映射到调度模式命名空间的虚拟平台名称。
 
-    When ``--platform codex`` is passed, return ``"codex-inline"`` (default)
-    or ``"codex-sub-agent"`` based on ``.trellis/config.yaml`` ``codex.dispatch_mode``.
-    ``filter_platform`` then surfaces blocks whose marker lists include the
-    namespaced name (e.g. ``[codex-sub-agent, ...]`` or ``[codex-inline, Kilo,
-    Antigravity, Windsurf]``).
+    当传入 ``--platform codex`` 时，根据 ``.trellis/config.yaml`` 中的
+    ``codex.dispatch_mode`` 返回 ``"codex-inline"``（默认）或
+    ``"codex-sub-agent"``。然后 ``filter_platform`` 会展示标记列表中
+    包含该命名空间名称的块（例如 ``[codex-sub-agent, ...]`` 或
+    ``[codex-inline, Kilo, Antigravity, Windsurf]``）。
 
-    Default is ``inline`` because Codex sub-agents run with ``fork_turns="none"``
-    isolation and can't inherit the parent session's task context — inline
-    keeps the main agent in charge so context isn't lost. Invalid / missing
-    values also fall back to inline.
+    默认为 ``inline``，因为 Codex 子智能体（sub-agent）以
+    ``fork_turns="none"`` 隔离方式运行，无法继承父会话的
+    任务上下文 — inline 模式保持主智能体掌控，这样上下文不会丢失。
+    无效/缺失的值也会回退到 inline。
 
-    Other platforms are returned unchanged.
+    其他平台原样返回。
     """
     if platform == "codex":
         mode = "inline"
@@ -172,9 +171,9 @@ def resolve_effective_platform(platform: str, config: dict) -> str:
 
 
 def filter_platform(content: str, platform: str) -> str:
-    """Keep lines outside any `[...]` block + lines inside blocks that include platform.
+    """保留在任何 `[...]` 块之外的行 + 包含该平台的块内的行。
 
-    Marker lines themselves are dropped from the output.
+    标记行本身从输出中丢弃。
     """
     lines = content.splitlines()
     out: list[str] = []
@@ -192,7 +191,7 @@ def filter_platform(content: str, platform: str) -> str:
             else:
                 in_block = False
                 keep_block = False
-            continue  # drop the marker line itself
+            continue  # 丢弃标记行本身
 
         if in_block:
             if keep_block:
@@ -200,7 +199,7 @@ def filter_platform(content: str, platform: str) -> str:
             continue
         out.append(line)
 
-    # Collapse runs of 3+ blank lines that may arise from dropped markers
+    # 合并因丢弃标记而产生的 3 个以上连续空行
     collapsed: list[str] = []
     blank_run = 0
     for line in out:

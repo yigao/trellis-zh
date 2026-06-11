@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 """
-Task JSONL context management.
+任务 JSONL 上下文（context）管理。
 
-Provides:
-    cmd_add_context   - Add entry to JSONL context file
-    cmd_validate      - Validate JSONL context files
-    cmd_list_context  - List JSONL context entries
+提供：
+    cmd_add_context   - 向 JSONL 上下文文件添加条目
+    cmd_validate      - 验证 JSONL 上下文文件
+    cmd_list_context  - 列出 JSONL 上下文条目
 
-Note:
-    ``cmd_init_context`` was removed in v0.5.0-beta.12. JSONL context files
-    are now seeded at ``task.py create`` time with a self-describing
-    ``_example`` line; the AI agent curates real entries during Phase 1.3 of
-    the workflow. See ``.trellis/workflow.md`` Phase 1.3 for the current
-    instructions.
+注意：
+    ``cmd_init_context`` 已在 v0.5.0-beta.12 中移除。JSONL 上下文文件
+    现在在 ``task.py create`` 时以自描述的 ``_example`` 行播种；
+    AI 代理在工作流（workflow）的 Phase 1.3 中管理实际条目。
+    参见 ``.trellis/workflow.md`` Phase 1.3 了解当前说明。
 """
 
 from __future__ import annotations
@@ -27,23 +26,23 @@ from .task_utils import resolve_task_dir
 
 
 # =============================================================================
-# Command: add-context
+# 命令：add-context
 # =============================================================================
 
 def cmd_add_context(args: argparse.Namespace) -> int:
-    """Add entry to JSONL context file."""
+    """向 JSONL 上下文文件添加条目。"""
     repo_root = get_repo_root()
     target_dir = resolve_task_dir(args.dir, repo_root)
 
     jsonl_name = args.file
     path = args.path
-    reason = args.reason or "Added manually"
+    reason = args.reason or "手动添加"
 
     if not target_dir.is_dir():
-        print(colored(f"Error: Directory not found: {target_dir}", Colors.RED))
+        print(colored(f"错误：目录未找到：{target_dir}", Colors.RED))
         return 1
 
-    # Support shorthand
+    # 支持简写
     if not jsonl_name.endswith(".jsonl"):
         jsonl_name = f"{jsonl_name}.jsonl"
 
@@ -56,17 +55,17 @@ def cmd_add_context(args: argparse.Namespace) -> int:
         if not path.endswith("/"):
             path = f"{path}/"
     elif not full_path.is_file():
-        print(colored(f"Error: Path not found: {path}", Colors.RED))
+        print(colored(f"错误：路径未找到：{path}", Colors.RED))
         return 1
 
-    # Check if already exists
+    # 检查是否已存在
     if jsonl_file.is_file():
         content = jsonl_file.read_text(encoding="utf-8")
         if f'"{path}"' in content:
-            print(colored(f"Warning: Entry already exists for {path}", Colors.YELLOW))
+            print(colored(f"警告：{path} 的条目已存在", Colors.YELLOW))
             return 0
 
-    # Add entry
+    # 添加条目
     entry: dict
     if entry_type == "directory":
         entry = {"file": path, "type": "directory", "reason": reason}
@@ -76,25 +75,25 @@ def cmd_add_context(args: argparse.Namespace) -> int:
     with jsonl_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    print(colored(f"Added {entry_type}: {path}", Colors.GREEN))
+    print(colored(f"已添加 {entry_type}：{path}", Colors.GREEN))
     return 0
 
 
 # =============================================================================
-# Command: validate
+# 命令：validate
 # =============================================================================
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    """Validate JSONL context files."""
+    """验证 JSONL 上下文文件。"""
     repo_root = get_repo_root()
     target_dir = resolve_task_dir(args.dir, repo_root)
 
     if not target_dir.is_dir():
-        print(colored("Error: task directory required", Colors.RED))
+        print(colored("错误：需要任务目录", Colors.RED))
         return 1
 
-    print(colored("=== Validating Context Files ===", Colors.BLUE))
-    print(f"Target dir: {target_dir}")
+    print(colored("=== 验证上下文文件 ===", Colors.BLUE))
+    print(f"目标目录：{target_dir}")
     print()
 
     total_errors = 0
@@ -105,24 +104,24 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     print()
     if total_errors == 0:
-        print(colored("✓ All validations passed", Colors.GREEN))
+        print(colored("✓ 所有验证通过", Colors.GREEN))
         return 0
     else:
-        print(colored(f"✗ Validation failed ({total_errors} errors)", Colors.RED))
+        print(colored(f"✗ 验证失败（{total_errors} 个错误）", Colors.RED))
         return 1
 
 
 def _validate_jsonl(jsonl_file: Path, repo_root: Path) -> int:
-    """Validate a single JSONL file.
+    """验证单个 JSONL 文件。
 
-    Seed rows (no ``file`` field — typically ``{"_example": "..."}``) are
-    skipped silently; they are self-describing comments, not real entries.
+    种子行（没有 ``file`` 字段 — 通常是 ``{"_example": "..."}``）
+    会被静默跳过；它们是自描述的注释，不是实际条目。
     """
     file_name = jsonl_file.name
     errors = 0
 
     if not jsonl_file.is_file():
-        print(f"  {colored(f'{file_name}: not found (skipped)', Colors.YELLOW)}")
+        print(f"  {colored(f'{file_name}：未找到（已跳过）', Colors.YELLOW)}")
         return 0
 
     line_num = 0
@@ -135,7 +134,7 @@ def _validate_jsonl(jsonl_file: Path, repo_root: Path) -> int:
         try:
             data = json.loads(line)
         except json.JSONDecodeError:
-            print(f"  {colored(f'{file_name}:{line_num}: Invalid JSON', Colors.RED)}")
+            print(f"  {colored(f'{file_name}:{line_num}：无效的 JSON', Colors.RED)}")
             errors += 1
             continue
 
@@ -143,42 +142,42 @@ def _validate_jsonl(jsonl_file: Path, repo_root: Path) -> int:
         entry_type = data.get("type", "file")
 
         if not file_path:
-            # Seed / comment row — skip silently
+            # 种子 / 注释行 — 静默跳过
             continue
 
         real_entries += 1
         full_path = repo_root / file_path
         if entry_type == "directory":
             if not full_path.is_dir():
-                print(f"  {colored(f'{file_name}:{line_num}: Directory not found: {file_path}', Colors.RED)}")
+                print(f"  {colored(f'{file_name}:{line_num}：目录未找到：{file_path}', Colors.RED)}")
                 errors += 1
         else:
             if not full_path.is_file():
-                print(f"  {colored(f'{file_name}:{line_num}: File not found: {file_path}', Colors.RED)}")
+                print(f"  {colored(f'{file_name}:{line_num}：文件未找到：{file_path}', Colors.RED)}")
                 errors += 1
 
     if errors == 0:
-        print(f"  {colored(f'{file_name}: ✓ ({real_entries} entries)', Colors.GREEN)}")
+        print(f"  {colored(f'{file_name}：✓（{real_entries} 个条目）', Colors.GREEN)}")
     else:
-        print(f"  {colored(f'{file_name}: ✗ ({errors} errors)', Colors.RED)}")
+        print(f"  {colored(f'{file_name}：✗（{errors} 个错误）', Colors.RED)}")
 
     return errors
 
 
 # =============================================================================
-# Command: list-context
+# 命令：list-context
 # =============================================================================
 
 def cmd_list_context(args: argparse.Namespace) -> int:
-    """List JSONL context entries."""
+    """列出 JSONL 上下文条目。"""
     repo_root = get_repo_root()
     target_dir = resolve_task_dir(args.dir, repo_root)
 
     if not target_dir.is_dir():
-        print(colored("Error: task directory required", Colors.RED))
+        print(colored("错误：需要任务目录", Colors.RED))
         return 1
 
-    print(colored("=== Context Files ===", Colors.BLUE))
+    print(colored("=== 上下文文件 ===", Colors.BLUE))
     print()
 
     for jsonl_name in ["implement.jsonl", "check.jsonl"]:
@@ -201,7 +200,7 @@ def cmd_list_context(args: argparse.Namespace) -> int:
 
             file_path = data.get("file")
             if not file_path:
-                # Seed / comment row — don't count as a real entry
+                # 种子 / 注释行 — 不计为实际条目
                 continue
             seed_only = False
 
@@ -216,7 +215,7 @@ def cmd_list_context(args: argparse.Namespace) -> int:
             print(f"     {colored('→', Colors.YELLOW)} {reason}")
 
         if seed_only:
-            print(f"  {colored('(no curated entries yet — only seed row)', Colors.YELLOW)}")
+            print(f"  {colored('（尚无已管理的条目 — 仅有种子行）', Colors.YELLOW)}")
 
         print()
 

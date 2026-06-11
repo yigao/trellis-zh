@@ -1,105 +1,105 @@
-# Code Reuse Thinking Guide
+# 代码复用思维指南
 
-> **Purpose**: Stop and think before creating new code - does it already exist?
-
----
-
-## The Problem
-
-**Duplicated code is the #1 source of inconsistency bugs.**
-
-When you copy-paste or rewrite existing logic:
-- Bug fixes don't propagate
-- Behavior diverges over time
-- Codebase becomes harder to understand
+> **目的**：在创建新代码之前停一停，先想一想——它是否已经存在？
 
 ---
 
-## Before Writing New Code
+## 问题
 
-### Step 1: Search First
+**重复代码是不一致 bug 的第一大来源。**
+
+当你复制粘贴或重写现有逻辑时：
+- bug 修复不会传播
+- 行为会随着时间推移产生分歧
+- 代码库变得越来越难以理解
+
+---
+
+## 编写新代码之前
+
+### 第 1 步：先搜索
 
 ```bash
-# Search for similar function names
+# 搜索相似的函数名
 grep -r "functionName" .
 
-# Search for similar logic
+# 搜索相似的逻辑
 grep -r "keyword" .
 ```
 
-### Step 2: Ask These Questions
+### 第 2 步：问自己这些问题
 
-| Question | If Yes... |
+| 问题 | 如果答案是"是"... |
 |----------|-----------|
-| Does a similar function exist? | Use or extend it |
-| Is this pattern used elsewhere? | Follow the existing pattern |
-| Could this be a shared utility? | Create it in the right place |
-| Am I copying code from another file? | **STOP** - extract to shared |
+| 是否存在相似的函数？ | 使用或扩展它 |
+| 此 pattern（模式）是否在别处使用过？ | 遵循现有的模式 |
+| 这能否成为一个共享工具？ | 在正确的位置创建它 |
+| 我是否在从另一个文件复制代码？ | **停止**——提取为共享代码 |
 
 ---
 
-## Common Duplication Patterns
+## 常见的重复模式
 
-### Pattern 1: Copy-Paste Functions
+### 模式 1：复制粘贴函数
 
-**Bad**: Copying a validation function to another file
+**错误做法**：将一个验证函数复制到另一个文件
 
-**Good**: Extract to shared utilities, import where needed
+**正确做法**：提取到共享工具中，在需要的地方导入
 
-### Pattern 2: Similar Components
+### 模式 2：相似的 component（组件）
 
-**Bad**: Creating a new component that's 80% similar to existing
+**错误做法**：创建一个与现有组件 80% 相似的新组件
 
-**Good**: Extend existing component with props/variants
+**正确做法**：通过 props/变体扩展现有组件
 
-### Pattern 3: Repeated Constants
+### 模式 3：重复的常量
 
-**Bad**: Defining the same constant in multiple files
+**错误做法**：在多个文件中定义相同的常量
 
-**Good**: Single source of truth, import everywhere
-
----
-
-## When to Abstract
-
-**Abstract when**:
-- Same code appears 3+ times
-- Logic is complex enough to have bugs
-- Multiple people might need this
-
-**Don't abstract when**:
-- Only used once
-- Trivial one-liner
-- Abstraction would be more complex than duplication
+**正确做法**：单一真实来源，各处导入
 
 ---
 
-## After Batch Modifications
+## 何时进行抽象
 
-When you've made similar changes to multiple files:
+**应该抽象的情况**：
+- 相同的代码出现 3 次以上
+- 逻辑复杂到可能产生 bug
+- 多个人可能需要使用
 
-1. **Review**: Did you catch all instances?
-2. **Search**: Run grep to find any missed
-3. **Consider**: Should this be abstracted?
-
----
-
-## Gotcha: Asymmetric Mechanisms Producing Same Output
-
-**Problem**: When two different mechanisms must produce the same file set (e.g., recursive directory copy for init vs. manual `files.set()` for update), structural changes (renaming, moving, adding subdirectories) only propagate through the automatic mechanism. The manual one silently drifts.
-
-**Symptom**: Init works perfectly, but update creates files at wrong paths or misses files entirely.
-
-**Prevention checklist**:
-- [ ] When migrating directory structures, search for ALL code paths that reference the old structure
-- [ ] If one path is auto-derived (glob/copy) and another is manually listed, the manual one needs updating
-- [ ] Add a regression test that compares outputs from both mechanisms
+**不应该抽象的情况**：
+- 只使用了一次
+- 简单的单行代码
+- 抽象比重复本身更复杂
 
 ---
 
-## Checklist Before Commit
+## 批量修改之后
 
-- [ ] Searched for existing similar code
-- [ ] No copy-pasted logic that should be shared
-- [ ] Constants defined in one place
-- [ ] Similar patterns follow same structure
+当你对多个文件进行了相似的修改后：
+
+1. **复查**：你是否覆盖了所有实例？
+2. **搜索**：运行 grep 查找遗漏的地方
+3. **思考**：是否应该进行抽象？
+
+---
+
+## 陷阱：产生相同输出的不对称机制
+
+**问题**：当两种不同的机制必须产生相同的文件集合时（例如，用于初始化的递归目录复制 vs. 用于更新的手动 `files.set()`），结构性变更（重命名、移动、添加子目录）只会通过自动机制传播。手动机制会悄悄地偏离。
+
+**症状**：init 工作正常，但 update 在错误的路径创建文件或完全遗漏文件。
+
+**预防检查清单**：
+- [ ] 在迁移目录结构时，搜索引用旧结构的**所有**代码路径
+- [ ] 如果一个路径是自动派生的（glob/复制），而另一个是手动列出的，手动路径需要更新
+- [ ] 添加一个回归测试来比较两种机制的输出
+
+---
+
+## 提交前检查清单
+
+- [ ] 搜索过现有的相似代码
+- [ ] 没有应该共享的复制粘贴逻辑
+- [ ] 常量只定义在一个地方
+- [ ] 相似的模式遵循相同的结构

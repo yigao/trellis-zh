@@ -1,5 +1,5 @@
 """
-Trellis Python Scripts
+Trellis Python 脚本
 
-This module provides Python implementations of Trellis workflow scripts.
+此模块提供 Trellis 工作流脚本的 Python 实现。
 """

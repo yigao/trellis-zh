@@ -1,31 +1,31 @@
-# Platform File Map
+# 平台文件映射
 
-This page lists common Trellis file locations in a user project by platform. Whether a platform directory exists in an actual project depends on which `trellis init --<platform>` commands the user ran.
+本页列出用户项目中按平台划分的常见 Trellis 文件位置。平台目录是否存在于实际项目中取决于用户运行了哪些 `trellis init --<platform>` 命令。
 
-## Matrix
+## 矩阵
 
-| Platform | CLI flag | Main directory | Skill directory | Agent directory | Hooks/extensions |
+| 平台 | CLI 标志 | 主目录 | 技能目录 | 智能体目录 | 钩子/扩展 |
 | --- | --- | --- | --- | --- | --- |
 | Claude Code | `--claude` | `.claude/` | `.claude/skills/` | `.claude/agents/` | `.claude/hooks/` + `.claude/settings.json` |
 | Cursor | `--cursor` | `.cursor/` | `.cursor/skills/` | `.cursor/agents/` | `.cursor/hooks.json` + `.cursor/hooks/` |
 | OpenCode | `--opencode` | `.opencode/` | `.opencode/skills/` | `.opencode/agents/` | `.opencode/plugins/` |
 | Codex | `--codex` | `.codex/` | `.agents/skills/` | `.codex/agents/` | `.codex/hooks/` + `.codex/hooks.json` |
-| Kilo | `--kilo` | `.kilocode/` | `.kilocode/skills/` | Usually none | `.kilocode/workflows/` |
+| Kilo | `--kilo` | `.kilocode/` | `.kilocode/skills/` | 通常无 | `.kilocode/workflows/` |
 | Kiro | `--kiro` | `.kiro/` | `.kiro/skills/` | `.kiro/agents/` | `.kiro/hooks/` |
 | Gemini CLI | `--gemini` | `.gemini/` | `.agents/skills/` | `.gemini/agents/` | `.gemini/settings.json` + `.gemini/hooks/` |
-| Antigravity | `--antigravity` | `.agent/` | `.agent/skills/` | Usually none | `.agent/workflows/` |
-| Windsurf | `--windsurf` | `.windsurf/` | `.windsurf/skills/` | Usually none | `.windsurf/workflows/` |
+| Antigravity | `--antigravity` | `.agent/` | `.agent/skills/` | 通常无 | `.agent/workflows/` |
+| Windsurf | `--windsurf` | `.windsurf/` | `.windsurf/skills/` | 通常无 | `.windsurf/workflows/` |
 | Qoder | `--qoder` | `.qoder/` | `.qoder/skills/` | `.qoder/agents/` | `.qoder/hooks/` + `.qoder/settings.json` |
 | CodeBuddy | `--codebuddy` | `.codebuddy/` | `.codebuddy/skills/` | `.codebuddy/agents/` | `.codebuddy/hooks/` + `.codebuddy/settings.json` |
 | GitHub Copilot | `--copilot` | `.github/` | `.github/skills/` | `.github/agents/` | `.github/copilot/hooks/` + prompts |
 | Factory Droid | `--droid` | `.factory/` | `.factory/skills/` | `.factory/droids/` | `.factory/hooks/` + settings |
 | Pi Agent | `--pi` | `.pi/` | `.pi/skills/` | `.pi/agents/` | `.pi/extensions/trellis/` + `.pi/settings.json` |
 
-## Capability Groups
+## 能力分组
 
-### Trellis Sub-Agent Support
+### Trellis 子智能体支持
 
-These platforms usually have `trellis-research`, `trellis-implement`, and `trellis-check` files:
+以下平台通常有 `trellis-research`、`trellis-implement` 和 `trellis-check` 文件：
 
 - Claude Code
 - Cursor
@@ -39,36 +39,36 @@ These platforms usually have `trellis-research`, `trellis-implement`, and `trell
 - Factory Droid
 - Pi Agent
 
-When changing implementation/check/research behavior, look for the corresponding platform agent files first.
+更改实现/检查/研究行为时，首先查找对应的平台智能体文件。
 
-### Main-Session Workflow Platforms
+### 主会话工作流平台
 
-These platforms rely more on workflows/skills to guide the main session:
+以下平台更多依赖工作流/技能来引导主会话：
 
 - Kilo
 - Antigravity
 - Windsurf
 
-When changing behavior, inspect workflows and skills first. Do not assume Trellis sub-agents exist.
+更改行为时，首先检查工作流和技能。不要假设 Trellis 子智能体存在。
 
-### Shared `.agents/skills/`
+### 共享 `.agents/skills/`
 
-Codex writes the shared `.agents/skills/` layer. Some tools that support agentskills.io can also read this directory. If the user wants multiple compatible tools to share one skill, consider `.agents/skills/` first, but do not assume every platform reads it.
+Codex 写入共享的 `.agents/skills/` 层级。某些支持 agentskills.io 的工具也可以读取此目录。如果用户希望多个兼容工具共享一个技能，优先考虑 `.agents/skills/`，但不要假设每个平台都会读取它。
 
-## Decision Rules When Modifying Platform Files
+## 修改平台文件时的决策规则
 
-1. User specified a platform: modify only that platform directory unless shared workflow/spec files must also change.
-2. User says "all platforms should do this": synchronize equivalent entry points platform by platform; do not modify only one directory.
-3. User only says "my AI": inspect the configuration directories that actually exist in the project and infer the current AI platform.
-4. User wants project rules: prefer `.trellis/spec/` or a project-local skill.
-5. User wants Trellis behavior: edit `.trellis/workflow.md` plus platform hooks/agents/skills/commands.
+1. 用户指定了某个平台：仅修改该平台目录，除非共享工作流/规范文件也必须变更。
+2. 用户说"所有平台都应该这样做"：逐平台同步等效入口点；不要只修改一个目录。
+3. 用户只说"我的 AI"：检查项目中实际存在的配置目录，推断当前的 AI 平台。
+4. 用户想要项目规则：优先使用 `.trellis/spec/` 或项目本地技能。
+5. 用户想要 Trellis 行为：编辑 `.trellis/workflow.md` 以及平台钩子/智能体/技能/命令。
 
-## When Paths Differ
+## 路径不一致时
 
-Platform ecosystems change, and user projects may already be customized. If this table disagrees with local files, use the actual settings/config in the user project as authoritative:
+平台生态会变化，用户项目可能已被定制。如果本表与本地文件不一致，以用户项目中的实际设置/配置为准：
 
-- Check the hook that settings registers.
-- Check the script that a command/prompt/workflow points to.
-- Judge behavior by the read rules currently written in the agent file.
+- 检查设置注册的钩子。
+- 检查命令/提示/工作流指向的脚本。
+- 以智能体文件中当前编写的读取规则判断行为。
 
-Do not delete a custom file just because it is not listed in this path table.
+不要仅仅因为某个文件未列在此路径表中就删除自定义文件。

@@ -1,59 +1,59 @@
-# Component Guidelines
+# 组件指南
 
-> How components are built in this project.
+> 本项目如何构建 component（组件）。
 
 ---
 
-## Overview
+## 概述
 
 <!--
-Document your project's component conventions here.
+在此处记录你项目的 component（组件）惯例。
 
-Questions to answer:
-- What component patterns do you use?
-- How are props defined?
-- How do you handle composition?
-- What accessibility standards apply?
+需要回答的问题：
+- 你使用什么组件模式？
+- Props 是如何定义的？
+- 你如何处理组合？
+- 适用哪些无障碍标准？
 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Component Structure
+## 组件结构
 
-<!-- Standard structure of a component file -->
+<!-- 组件文件的标准结构 -->
 
-(To be filled by the team)
-
----
-
-## Props Conventions
-
-<!-- How props should be defined and typed -->
-
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Styling Patterns
+## Props 惯例
 
-<!-- How styles are applied (CSS modules, styled-components, Tailwind, etc.) -->
+<!-- Props 应如何定义和类型化 -->
 
-(To be filled by the team)
-
----
-
-## Accessibility
-
-<!-- A11y requirements and patterns -->
-
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Common Mistakes
+## 样式模式
 
-<!-- Component-related mistakes your team has made -->
+<!-- 样式是如何应用的（CSS modules、styled-components、Tailwind 等） -->
 
-(To be filled by the team)
+（待团队填写）
+
+---
+
+## 无障碍性
+
+<!-- A11y 要求和模式 -->
+
+（待团队填写）
+
+---
+
+## 常见错误
+
+<!-- 你的团队曾经犯过的组件相关错误 -->
+
+（待团队填写）

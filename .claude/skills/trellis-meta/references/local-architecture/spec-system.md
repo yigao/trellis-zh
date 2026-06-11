@@ -1,10 +1,10 @@
-# Local Spec System
+# 本地规范系统
 
-`.trellis/spec/` is the user's project-specific engineering spec library. Trellis is not about making AI memorize conventions; it injects relevant specs or requires the AI to read them at the right time.
+`.trellis/spec/` 是用户项目专属的工程规范库。Trellis 不是让 AI 记住惯例（convention），而是在合适的时机注入相关规范或要求 AI 去读取它们。
 
-## Directory Model
+## 目录模型
 
-A common single-repository structure:
+常见的单仓库结构：
 
 ```text
 .trellis/spec/
@@ -19,7 +19,7 @@ A common single-repository structure:
     └── ...
 ```
 
-A common monorepo structure:
+常见的 monorepo 结构：
 
 ```text
 .trellis/spec/
@@ -39,11 +39,11 @@ A common monorepo structure:
     └── ...
 ```
 
-`index.md` is the entry point for each layer. It should list the Pre-Development Checklist and Quality Check. Specific guidelines live in other Markdown files in the same directory.
+`index.md` 是每个层级的入口点。它应列出开发前检查清单和质量检查（quality check）。具体指南（guideline）存放在同一目录下的其他 Markdown 文件中。
 
-## Package Configuration
+## 软件包配置
 
-`.trellis/config.yaml` can declare packages:
+`.trellis/config.yaml` 可以声明软件包：
 
 ```yaml
 packages:
@@ -55,48 +55,48 @@ packages:
 default_package: cli
 ```
 
-The AI can run:
+AI 可以运行：
 
 ```bash
 py -3 ./.trellis/scripts/get_context.py --mode packages
 ```
 
-This command lists packages and spec layers for the current project. Use this output as the reference when configuring context JSONL.
+此命令列出当前项目的软件包和规范层级。配置上下文 JSONL 时将此输出作为参考。
 
-## How Specs Enter Tasks
+## 规范如何进入任务
 
-Before a task enters implementation, Phase 1.3 should write relevant specs into `implement.jsonl` / `check.jsonl`:
+在任务进入实现阶段之前，阶段 1.3 应将相关规范写入 `implement.jsonl` / `check.jsonl`：
 
 ```jsonl
 {"file": ".trellis/spec/cli/backend/index.md", "reason": "CLI backend conventions"}
 {"file": ".trellis/spec/cli/unit-test/conventions.md", "reason": "Test expectations"}
 ```
 
-Sub-agents or platform preludes read these JSONL files and load the referenced specs. On platforms without sub-agent support, the AI should read the relevant specs directly according to the workflow.
+子智能体或平台序言读取这些 JSONL 文件并加载引用的规范。在不支持子智能体的平台上，AI 应按照工作流直接读取相关规范。
 
-## What Specs Should Contain
+## 规范应包含的内容
 
-Specs should contain executable engineering conventions for the project, not generic best practices:
+规范应包含项目可执行的工程惯例，而非通用最佳实践：
 
-- Where files should live.
-- How error handling should be expressed.
-- Input/output contracts for APIs, hooks, and commands.
-- Patterns that are forbidden.
-- Cases that require tests.
-- Project-specific pitfalls and how to avoid them.
+- 文件应放置的位置。
+- 错误处理应如何表达。
+- API、钩子和命令的输入/输出契约。
+- 被禁止使用的模式（pattern）。
+- 需要测试的场景。
+- 项目特有的陷阱及如何避免。
 
-When the AI learns a new rule during implementation or debugging, it should update `.trellis/spec/` rather than only summarizing it in chat.
+当 AI 在实现或调试过程中学到新规则时，应更新 `.trellis/spec/`，而不是仅在聊天中总结。
 
-## Local Customization Points
+## 本地定制点
 
-| Need | Edit location |
+| 需求 | 编辑位置 |
 | --- | --- |
-| Add a new spec layer | `.trellis/spec/<package>/<layer>/index.md` and corresponding guideline files. |
-| Change monorepo spec mapping | `packages` / `default_package` / `spec_scope` in `.trellis/config.yaml`. |
-| Change which specs AI reads before implementation | The task's `implement.jsonl`. |
-| Change which specs AI reads during checking | The task's `check.jsonl`. |
-| Change when specs should be updated | Phase 3.3 in `.trellis/workflow.md` and the `trellis-update-spec` skill. |
+| 添加新的规范层级 | `.trellis/spec/<package>/<layer>/index.md` 及相应的指南文件。 |
+| 更改 monorepo 规范映射 | `.trellis/config.yaml` 中的 `packages` / `default_package` / `spec_scope`。 |
+| 更改 AI 在实现前应读取的规范 | 任务的 `implement.jsonl`。 |
+| 更改 AI 在检查期间应读取的规范 | 任务的 `check.jsonl`。 |
+| 更改何时应更新规范 | `.trellis/workflow.md` 中的阶段 3.3 和 `trellis-update-spec` 技能。 |
 
-## Boundaries
+## 边界
 
-`.trellis/spec/` is the user's project specification, not a permanent copy of Trellis built-in templates. The AI should encourage the user to update it according to the actual project code instead of treating Trellis default templates as immutable documents.
+`.trellis/spec/` 是用户的项目规范，而非 Trellis 内置模板的永久副本。AI 应鼓励用户根据实际项目代码更新它，而不是将 Trellis 默认模板视为不可变文档。

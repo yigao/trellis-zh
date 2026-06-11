@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Task CRUD operations.
+任务 CRUD 操作。
 
-Provides:
-    ensure_tasks_dir   - Ensure tasks directory exists
-    cmd_create         - Create a new task
-    cmd_archive        - Archive completed task
-    cmd_set_branch     - Set git branch for task
-    cmd_set_base_branch - Set PR target branch
-    cmd_set_scope      - Set scope for PR title
-    cmd_add_subtask    - Link child task to parent
-    cmd_remove_subtask - Unlink child task from parent
+提供：
+    ensure_tasks_dir   - 确保任务目录存在
+    cmd_create         - 创建新任务
+    cmd_archive        - 归档已完成任务
+    cmd_set_branch     - 设置任务的 git 分支
+    cmd_set_base_branch - 设置 PR（拉取请求）目标分支
+    cmd_set_scope      - 设置 PR 标题的范围（scope）
+    cmd_add_subtask    - 将子（child）任务链接到父（parent）任务
+    cmd_remove_subtask - 取消子任务与父任务的链接
 """
 
 from __future__ import annotations
@@ -56,11 +56,11 @@ from .task_utils import (
 
 
 # =============================================================================
-# Helper Functions
+# 辅助函数
 # =============================================================================
 
 def _slugify(title: str) -> str:
-    """Convert title to slug (only works with ASCII)."""
+    """将标题转换为 slug（仅适用于 ASCII）。"""
     result = title.lower()
     result = re.sub(r"[^a-z0-9]", "-", result)
     result = re.sub(r"-+", "-", result)
@@ -69,13 +69,13 @@ def _slugify(title: str) -> str:
 
 
 def ensure_tasks_dir(repo_root: Path) -> Path:
-    """Ensure tasks directory exists."""
+    """确保任务目录存在。"""
     tasks_dir = get_tasks_dir(repo_root)
     archive_dir = tasks_dir / "archive"
 
     if not tasks_dir.exists():
         tasks_dir.mkdir(parents=True)
-        print(colored(f"Created tasks directory: {tasks_dir}", Colors.GREEN), file=sys.stderr)
+        print(colored(f"已创建任务目录：{tasks_dir}", Colors.GREEN), file=sys.stderr)
 
     if not archive_dir.exists():
         archive_dir.mkdir(parents=True)
@@ -84,14 +84,14 @@ def ensure_tasks_dir(repo_root: Path) -> Path:
 
 
 # =============================================================================
-# Sub-agent platform detection + JSONL seeding
+# 子代理平台检测 + JSONL 播种
 # =============================================================================
 
-# Config directories of platforms that consume implement.jsonl / check.jsonl.
-# Keep in sync with src/types/ai-tools.ts AI_TOOLS entries — these are the
-# platforms listed in workflow.md's "agent-capable" Skill Routing block
-# (Class-1 hook-inject + Class-2 pull-based preludes). Kilo / Antigravity /
-# Windsurf are NOT in this list: they do not consume JSONL.
+# 消费 implement.jsonl / check.jsonl 的平台的配置目录。
+# 与 src/types/ai-tools.ts 中的 AI_TOOLS 条目保持同步 — 这些是
+# workflow.md 的 "agent-capable" Skill Routing 块中列出的平台
+#（Class-1 hook-inject + Class-2 pull-based preludes）。Kilo / Antigravity /
+# Windsurf 不在该列表中：它们不消费 JSONL。
 _SUBAGENT_CONFIG_DIRS: tuple[str, ...] = (
     ".claude",
     ".cursor",
@@ -115,11 +115,11 @@ _SEED_EXAMPLE = (
 
 
 def _has_subagent_platform(repo_root: Path) -> bool:
-    """Return True if any sub-agent-capable platform is configured.
+    """如果配置了任何支持子代理的平台则返回 True。
 
-    Detected by probing well-known config directories at the repo root. Used
-    only to decide whether ``task.py create`` should seed empty
-    ``implement.jsonl`` / ``check.jsonl`` files.
+    通过探测仓库根目录下的已知配置目录来检测。仅用于决定
+    ``task.py create`` 是否应该播种空的 ``implement.jsonl`` /
+    ``check.jsonl`` 文件。
     """
     for config_dir in _SUBAGENT_CONFIG_DIRS:
         if (repo_root / config_dir).is_dir():
@@ -128,65 +128,65 @@ def _has_subagent_platform(repo_root: Path) -> bool:
 
 
 def _write_seed_jsonl(path: Path) -> None:
-    """Write a one-line seed JSONL file with a self-describing ``_example``.
+    """写入一行带有自描述 ``_example`` 的种子 JSONL 文件。
 
-    The seed row has no ``file`` field, so downstream consumers (hooks +
-    preludes) that iterate entries via ``item.get("file")`` naturally skip
-    it. The row exists purely as an in-file prompt for the AI curator.
+    种子行没有 ``file`` 字段，因此下游消费者（hook + prelude）
+    在遍历条目时通过 ``item.get("file")`` 自然会跳过它。
+    该行纯粹作为 AI 管理者的文件内提示存在。
     """
     seed = {"_example": _SEED_EXAMPLE}
     path.write_text(json.dumps(seed, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 # =============================================================================
-# Command: create
+# 命令：create
 # =============================================================================
 
 def cmd_create(args: argparse.Namespace) -> int:
-    """Create a new task."""
+    """创建新任务。"""
     repo_root = get_repo_root()
 
     if not args.title:
-        print(colored("Error: title is required", Colors.RED), file=sys.stderr)
+        print(colored("错误：标题为必填项", Colors.RED), file=sys.stderr)
         return 1
 
-    # Validate --package (CLI source: fail-fast)
+    # 验证 --package（CLI 来源：快速失败）
     package: str | None = getattr(args, "package", None)
     if not is_monorepo(repo_root):
-        # Single-repo: ignore --package, no package prefix
+        # 单仓库：忽略 --package，不带 package 前缀
         if package:
-            print(colored(f"Warning: --package ignored in single-repo project", Colors.YELLOW), file=sys.stderr)
+            print(colored(f"警告：在单仓库项目中 --package 被忽略", Colors.YELLOW), file=sys.stderr)
         package = None
     elif package:
         if not validate_package(package, repo_root):
             packages = get_packages(repo_root)
             available = ", ".join(sorted(packages.keys())) if packages else "(none)"
-            print(colored(f"Error: unknown package '{package}'. Available: {available}", Colors.RED), file=sys.stderr)
+            print(colored(f"错误：未知软件包 '{package}'。可用：{available}", Colors.RED), file=sys.stderr)
             return 1
     else:
-        # Inferred: default_package → None (no task.json yet for create)
+        # 自动推断：default_package → None（创建时还没有 task.json）
         package = resolve_package(repo_root=repo_root)
 
-    # Default assignee to current developer
+    # 默认指派人为当前开发者（developer）
     assignee = args.assignee
     if not assignee:
         assignee = get_developer(repo_root)
         if not assignee:
-            print(colored("Error: No developer set. Run init_developer.py first or use --assignee", Colors.RED), file=sys.stderr)
+            print(colored("错误：未设置开发者。请先运行 init_developer.py 或使用 --assignee", Colors.RED), file=sys.stderr)
             return 1
 
     ensure_tasks_dir(repo_root)
 
-    # Get current developer as creator
+    # 获取当前开发者作为创建者
     creator = get_developer(repo_root) or assignee
 
-    # Generate slug if not provided
+    # 若未提供则生成 slug
     slug = args.slug or _slugify(args.title)
     if not slug:
-        print(colored("Error: could not generate slug from title", Colors.RED), file=sys.stderr)
+        print(colored("错误：无法从标题生成 slug", Colors.RED), file=sys.stderr)
         return 1
 
-    # Create task directory with MM-DD-slug format
+    # 以 MM-DD-slug 格式创建任务目录
     tasks_dir = get_tasks_dir(repo_root)
     date_prefix = generate_task_date_prefix()
     dir_name = f"{date_prefix}-{slug}"
@@ -194,13 +194,13 @@ def cmd_create(args: argparse.Namespace) -> int:
     task_json_path = task_dir / FILE_TASK_JSON
 
     if task_dir.exists():
-        print(colored(f"Warning: Task directory already exists: {dir_name}", Colors.YELLOW), file=sys.stderr)
+        print(colored(f"警告：任务目录已存在：{dir_name}", Colors.YELLOW), file=sys.stderr)
     else:
         task_dir.mkdir(parents=True)
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    # Record current branch as base_branch (PR target)
+    # 记录当前分支作为 base_branch（PR 目标）
     _, branch_out, _ = run_git(["branch", "--show-current"], cwd=repo_root)
     current_branch = branch_out.strip() or "main"
 
@@ -233,10 +233,10 @@ def cmd_create(args: argparse.Namespace) -> int:
 
     write_json(task_json_path, task_data)
 
-    # Seed implement.jsonl / check.jsonl for sub-agent-capable platforms.
-    # Agent curates real entries in Phase 1.3 (see .trellis/workflow.md).
-    # Agent-less platforms (Kilo / Antigravity / Windsurf) skip this — they
-    # load specs via the trellis-before-dev skill instead of JSONL.
+    # 为支持子代理的平台播种 implement.jsonl / check.jsonl。
+    # 代理在 Phase 1.3 中管理实际条目（参见 .trellis/workflow.md）。
+    # 无代理平台（Kilo / Antigravity / Windsurf）跳过此步骤 — 它们
+    # 通过 trellis-before-dev skill 加载规范（spec），而非 JSONL。
     seeded_jsonl = False
     if _has_subagent_platform(repo_root):
         for jsonl_name in ("implement.jsonl", "check.jsonl"):
@@ -245,33 +245,32 @@ def cmd_create(args: argparse.Namespace) -> int:
                 _write_seed_jsonl(jsonl_path)
         seeded_jsonl = True
 
-    # Handle --parent: establish bidirectional link
+    # 处理 --parent：建立双向链接
     if args.parent:
         parent_dir = resolve_task_dir(args.parent, repo_root)
         parent_json_path = parent_dir / FILE_TASK_JSON
         if not parent_json_path.is_file():
-            print(colored(f"Warning: Parent task.json not found: {args.parent}", Colors.YELLOW), file=sys.stderr)
+            print(colored(f"警告：父任务 task.json 未找到：{args.parent}", Colors.YELLOW), file=sys.stderr)
         else:
             parent_data = read_json(parent_json_path)
             if parent_data:
-                # Add child to parent's children list
+                # 将子任务添加到父任务的 children 列表
                 parent_children = parent_data.get("children", [])
                 if dir_name not in parent_children:
                     parent_children.append(dir_name)
                     parent_data["children"] = parent_children
                     write_json(parent_json_path, parent_data)
 
-                # Set parent in child's task.json
+                # 在子任务的 task.json 中设置 parent
                 task_data["parent"] = parent_dir.name
                 write_json(task_json_path, task_data)
 
-                print(colored(f"Linked as child of: {parent_dir.name}", Colors.GREEN), file=sys.stderr)
+                print(colored(f"已链接为子任务，父任务：{parent_dir.name}", Colors.GREEN), file=sys.stderr)
 
-    # Auto-activate the new task so the per-turn breadcrumb fires planning
-    # state. Best-effort: gracefully degrade if no session identity (CLI run
-    # outside an AI session) — the task is still created, the user can run
-    # task.py start later. Pointer is session-scoped so this never affects
-    # other AI sessions.
+    # 自动激活新任务，以便每轮面包屑触发 planning 状态。
+    # 尽力而为：若无会话（session）身份则优雅降级（在 AI 会话之外
+    # 运行 CLI）— 任务仍然创建，用户可以稍后运行 task.py start。
+    # 指针是 session 作用域的，因此绝不会影响其他 AI 会话。
     try:
         from .active_task import resolve_context_key, set_active_task
         if resolve_context_key():
@@ -283,22 +282,22 @@ def cmd_create(args: argparse.Namespace) -> int:
     except Exception:
         pass
 
-    print(colored(f"Created task: {dir_name}", Colors.GREEN), file=sys.stderr)
+    print(colored(f"已创建任务：{dir_name}", Colors.GREEN), file=sys.stderr)
     print("", file=sys.stderr)
-    print(colored("Next steps:", Colors.BLUE), file=sys.stderr)
-    print("  1. Create prd.md with requirements", file=sys.stderr)
+    print(colored("后续步骤：", Colors.BLUE), file=sys.stderr)
+    print("  1. 创建包含需求的 prd.md", file=sys.stderr)
     if seeded_jsonl:
         print(
-            "  2. Curate implement.jsonl / check.jsonl (spec + research files only — "
-            "see .trellis/workflow.md Phase 1.3)",
+            "  2. 管理 implement.jsonl / check.jsonl（仅规范和研究文件 — "
+            "参见 .trellis/workflow.md Phase 1.3）",
             file=sys.stderr,
         )
-        print("  3. Run: py -3 task.py start <dir>", file=sys.stderr)
+        print("  3. 运行：py -3 task.py start <dir>", file=sys.stderr)
     else:
-        print("  2. Run: py -3 task.py start <dir>", file=sys.stderr)
+        print("  2. 运行：py -3 task.py start <dir>", file=sys.stderr)
     print("", file=sys.stderr)
 
-    # Output relative path for script chaining
+    # 输出相对路径以供脚本链式调用
     print(f"{DIR_WORKFLOW}/{DIR_TASKS}/{dir_name}")
 
     run_task_hooks("after_create", task_json_path, repo_root)
@@ -306,27 +305,27 @@ def cmd_create(args: argparse.Namespace) -> int:
 
 
 # =============================================================================
-# Command: archive
+# 命令：archive
 # =============================================================================
 
 def cmd_archive(args: argparse.Namespace) -> int:
-    """Archive completed task."""
+    """归档已完成任务。"""
     repo_root = get_repo_root()
     task_name = args.name
 
     if not task_name:
-        print(colored("Error: Task name is required", Colors.RED), file=sys.stderr)
+        print(colored("错误：任务名称为必填项", Colors.RED), file=sys.stderr)
         return 1
 
     tasks_dir = get_tasks_dir(repo_root)
 
-    # Resolve task directory (supports task name, relative path, or absolute path)
+    # 解析任务目录（支持任务名称、相对路径或绝对路径）
     task_dir = resolve_task_dir(task_name, repo_root)
 
     if not task_dir or not task_dir.is_dir():
-        print(colored(f"Error: Task not found: {task_name}", Colors.RED), file=sys.stderr)
-        print("Active tasks:", file=sys.stderr)
-        # Import lazily to avoid circular dependency
+        print(colored(f"错误：任务未找到：{task_name}", Colors.RED), file=sys.stderr)
+        print("活动任务：", file=sys.stderr)
+        # 延迟导入以避免循环依赖
         from .tasks import iter_active_tasks
         for t in iter_active_tasks(tasks_dir):
             print(f"  - {t.dir_name}/", file=sys.stderr)
@@ -335,10 +334,10 @@ def cmd_archive(args: argparse.Namespace) -> int:
     dir_name = task_dir.name
     task_json_path = task_dir / FILE_TASK_JSON
 
-    # Update status before archiving
+    # 归档前更新状态
     today = datetime.now().strftime("%Y-%m-%d")
-    # Names of child task dirs whose task.json gets modified below; passed
-    # into safe_archive_paths_to_add so they're staged in this commit.
+    # 子任务目录名称列表，其 task.json 将被修改；传入
+    # safe_archive_paths_to_add 以便在本次提交中暂存。
     modified_children: list[str] = []
     if task_json_path.is_file():
         data = read_json(task_json_path)
@@ -347,13 +346,13 @@ def cmd_archive(args: argparse.Namespace) -> int:
             data["completedAt"] = today
             write_json(task_json_path, data)
 
-            # Handle subtask relationships on archive.
-            # Keep this task in its parent's children list so progress
-            # counters (children_progress) stay consistent — children
-            # missing from the active set are treated as completed.
+            # 归档时处理子任务关系。
+            # 将此任务保留在父任务的 children 列表中，以便进度
+            # 计数器（children_progress）保持一致 — 不在活动
+            # 集合中的子任务被视为已完成。
             task_children = data.get("children", [])
 
-            # If this is a parent, clear parent field in all children
+            # 如果这是父任务，清除所有子任务的 parent 字段
             if task_children:
                 for child_name in task_children:
                     child_dir_path = find_task_by_name(child_name, tasks_dir)
@@ -366,25 +365,25 @@ def cmd_archive(args: argparse.Namespace) -> int:
                                 write_json(child_json, child_data)
                                 modified_children.append(child_dir_path.name)
 
-    # Clear any session that still points at this task before the path moves.
+    # 在路径移动之前，清除仍指向此任务的所有会话指针。
     from .active_task import clear_task_from_sessions
     clear_task_from_sessions(str(task_dir), repo_root)
 
-    # Archive
+    # 归档
     result = archive_task_complete(task_dir, repo_root)
     if "archived_to" in result:
         archive_dest = Path(result["archived_to"])
         year_month = archive_dest.parent.name
-        print(colored(f"Archived: {dir_name} -> archive/{year_month}/", Colors.GREEN), file=sys.stderr)
+        print(colored(f"已归档：{dir_name} -> archive/{year_month}/", Colors.GREEN), file=sys.stderr)
 
-        # Auto-commit unless --no-commit
+        # 自动提交，除非指定了 --no-commit
         if not getattr(args, "no_commit", False):
             _auto_commit_archive(dir_name, repo_root, modified_children)
 
-        # Return the archive path
+        # 返回归档路径
         print(f"{DIR_WORKFLOW}/{DIR_TASKS}/{DIR_ARCHIVE}/{year_month}/{dir_name}")
 
-        # Run hooks with the archived path
+        # 使用归档后的路径运行 hook
         archived_json = archive_dest / FILE_TASK_JSON
         run_task_hooks("after_archive", archived_json, repo_root)
         return 0
@@ -397,25 +396,24 @@ def _auto_commit_archive(
     repo_root: Path,
     modified_children: list[str] | None = None,
 ) -> None:
-    """Stage Trellis-owned task paths and commit after archive.
+    """归档后暂存 Trellis 拥有的任务路径并提交。
 
-    Scoped narrowly to the archived task's source + destination paths
-    plus any child task dirs whose ``task.json`` was edited (parent →
-    children relationship update). Dirty changes in OTHER active task
-    dirs are NOT bundled into the archive commit.
+    范围严格限定为已归档任务的源路径 + 目标路径，加上
+    ``task.json`` 被编辑过的子任务目录（父→子关系更新）。
+    其他活动任务目录中的脏变更不会被捆绑到归档提交中。
 
-    If ``.gitignore`` blocks the paths, we warn + skip — we do NOT
-    retry with ``git add -f``. The warning explicitly forbids
-    ``git add -f .trellis/`` (which would fan out to caches/backups)
-    and points users at ``session_auto_commit: false``.
+    如果 ``.gitignore`` 阻止了这些路径，我们会警告并跳过 — 我们
+    不会使用 ``git add -f`` 重试。该警告明确禁止使用
+    ``git add -f .trellis/``（这会导致缓存/备份被纳入），
+    并引导用户使用 ``session_auto_commit: false``。
 
-    Honors ``session_auto_commit`` in ``.trellis/config.yaml``: when
-    set to ``false``, this function returns immediately without
-    touching git (the archive directory move on disk is unaffected).
+    尊重 ``.trellis/config.yaml`` 中的 ``session_auto_commit`` 设置：
+    当设为 ``false`` 时，此函数立即返回而不触 git
+    （磁盘上的归档目录移动不受影响）。
     """
     if not get_session_auto_commit(repo_root):
         print(
-            "[OK] session_auto_commit: false — skipping git stage/commit.",
+            "[OK] session_auto_commit: false — 跳过 git stage/commit。",
             file=sys.stderr,
         )
         return
@@ -424,7 +422,7 @@ def _auto_commit_archive(
         repo_root, task_name=task_name, modified_children=modified_children
     )
     if not paths:
-        print("[OK] No task changes to commit.", file=sys.stderr)
+        print("[OK] 没有任务变更需要提交。", file=sys.stderr)
         return
 
     success, _, err = safe_git_add(paths, repo_root)
@@ -433,20 +431,19 @@ def _auto_commit_archive(
             print_gitignore_warning(paths)
         else:
             print(
-                f"[WARN] git add failed: {err.strip() if err else 'unknown error'}",
+                f"[警告] git add 失败：{err.strip() if err else '未知错误'}",
                 file=sys.stderr,
             )
         return
 
-    # Belt-and-suspenders for the phantom-delete bug: `safe_git_add` uses
-    # `git add` (no -A) which only stages additions/modifications. The
-    # source task directory was moved away by `shutil.move`, so its files
-    # need an explicit `git rm --cached` to stage the deletions in this
-    # same commit — otherwise they sit as uncommitted "phantom deletes"
-    # against HEAD until something later picks them up.
+    # 双重保障防止幽灵删除 bug：``safe_git_add`` 使用 ``git add``
+    #（不带 -A）只暂存新增/修改。源任务目录已被 ``shutil.move``
+    # 移走，因此其文件需要显式的 ``git rm --cached`` 才能在本次
+    # 提交中暂存删除 — 否则它们会作为未提交的"幽灵删除"一直存在，
+    # 直到后续某个操作将它们捡起。
     #
-    # `--ignore-unmatch` makes this a no-op when the task was never tracked
-    # (e.g. archiving a task that lived only in working tree).
+    # ``--ignore-unmatch`` 使其在任务从未被跟踪时成为空操作
+    #（例如归档一个仅存在于工作树中的任务）。
     source_rel = f"{DIR_WORKFLOW}/{DIR_TASKS}/{task_name}"
     run_git(
         ["rm", "-r", "--cached", "--ignore-unmatch", "--", source_rel],
@@ -458,23 +455,23 @@ def _auto_commit_archive(
         cwd=repo_root,
     )
     if rc == 0:
-        print("[OK] No task changes to commit.", file=sys.stderr)
+        print("[OK] 没有任务变更需要提交。", file=sys.stderr)
         return
 
     commit_msg = f"chore(task): archive {task_name}"
     rc, _, err = run_git(["commit", "-m", commit_msg], cwd=repo_root)
     if rc == 0:
-        print(f"[OK] Auto-committed: {commit_msg}", file=sys.stderr)
+        print(f"[OK] 自动提交：{commit_msg}", file=sys.stderr)
     else:
-        print(f"[WARN] Auto-commit failed: {err.strip()}", file=sys.stderr)
+        print(f"[警告] 自动提交失败：{err.strip()}", file=sys.stderr)
 
 
 # =============================================================================
-# Command: add-subtask
+# 命令：add-subtask
 # =============================================================================
 
 def cmd_add_subtask(args: argparse.Namespace) -> int:
-    """Link a child task to a parent task."""
+    """将子任务链接到父任务。"""
     repo_root = get_repo_root()
 
     parent_dir = resolve_task_dir(args.parent_dir, repo_root)
@@ -484,50 +481,50 @@ def cmd_add_subtask(args: argparse.Namespace) -> int:
     child_json_path = child_dir / FILE_TASK_JSON
 
     if not parent_json_path.is_file():
-        print(colored(f"Error: Parent task.json not found: {args.parent_dir}", Colors.RED), file=sys.stderr)
+        print(colored(f"错误：父任务 task.json 未找到：{args.parent_dir}", Colors.RED), file=sys.stderr)
         return 1
 
     if not child_json_path.is_file():
-        print(colored(f"Error: Child task.json not found: {args.child_dir}", Colors.RED), file=sys.stderr)
+        print(colored(f"错误：子任务 task.json 未找到：{args.child_dir}", Colors.RED), file=sys.stderr)
         return 1
 
     parent_data = read_json(parent_json_path)
     child_data = read_json(child_json_path)
 
     if not parent_data or not child_data:
-        print(colored("Error: Failed to read task.json", Colors.RED), file=sys.stderr)
+        print(colored("错误：读取 task.json 失败", Colors.RED), file=sys.stderr)
         return 1
 
-    # Check if child already has a parent
+    # 检查子任务是否已有父任务
     existing_parent = child_data.get("parent")
     if existing_parent:
-        print(colored(f"Error: Child task already has a parent: {existing_parent}", Colors.RED), file=sys.stderr)
+        print(colored(f"错误：子任务已有父任务：{existing_parent}", Colors.RED), file=sys.stderr)
         return 1
 
-    # Add child to parent's children list
+    # 将子任务添加到父任务的 children 列表
     parent_children = parent_data.get("children", [])
     child_dir_name = child_dir.name
     if child_dir_name not in parent_children:
         parent_children.append(child_dir_name)
         parent_data["children"] = parent_children
 
-    # Set parent in child's task.json
+    # 在子任务的 task.json 中设置 parent
     child_data["parent"] = parent_dir.name
 
-    # Write both
+    # 写入双方
     write_json(parent_json_path, parent_data)
     write_json(child_json_path, child_data)
 
-    print(colored(f"Linked: {child_dir.name} -> {parent_dir.name}", Colors.GREEN), file=sys.stderr)
+    print(colored(f"已链接：{child_dir.name} -> {parent_dir.name}", Colors.GREEN), file=sys.stderr)
     return 0
 
 
 # =============================================================================
-# Command: remove-subtask
+# 命令：remove-subtask
 # =============================================================================
 
 def cmd_remove_subtask(args: argparse.Namespace) -> int:
-    """Unlink a child task from a parent task."""
+    """取消子任务与父任务的链接。"""
     repo_root = get_repo_root()
 
     parent_dir = resolve_task_dir(args.parent_dir, repo_root)
@@ -537,56 +534,56 @@ def cmd_remove_subtask(args: argparse.Namespace) -> int:
     child_json_path = child_dir / FILE_TASK_JSON
 
     if not parent_json_path.is_file():
-        print(colored(f"Error: Parent task.json not found: {args.parent_dir}", Colors.RED), file=sys.stderr)
+        print(colored(f"错误：父任务 task.json 未找到：{args.parent_dir}", Colors.RED), file=sys.stderr)
         return 1
 
     if not child_json_path.is_file():
-        print(colored(f"Error: Child task.json not found: {args.child_dir}", Colors.RED), file=sys.stderr)
+        print(colored(f"错误：子任务 task.json 未找到：{args.child_dir}", Colors.RED), file=sys.stderr)
         return 1
 
     parent_data = read_json(parent_json_path)
     child_data = read_json(child_json_path)
 
     if not parent_data or not child_data:
-        print(colored("Error: Failed to read task.json", Colors.RED), file=sys.stderr)
+        print(colored("错误：读取 task.json 失败", Colors.RED), file=sys.stderr)
         return 1
 
-    # Remove child from parent's children list
+    # 从父任务的 children 列表中移除子任务
     parent_children = parent_data.get("children", [])
     child_dir_name = child_dir.name
     if child_dir_name in parent_children:
         parent_children.remove(child_dir_name)
         parent_data["children"] = parent_children
 
-    # Clear parent in child's task.json
+    # 清除子任务 task.json 中的 parent 字段
     child_data["parent"] = None
 
-    # Write both
+    # 写入双方
     write_json(parent_json_path, parent_data)
     write_json(child_json_path, child_data)
 
-    print(colored(f"Unlinked: {child_dir.name} from {parent_dir.name}", Colors.GREEN), file=sys.stderr)
+    print(colored(f"已取消链接：{child_dir.name} 与 {parent_dir.name}", Colors.GREEN), file=sys.stderr)
     return 0
 
 
 # =============================================================================
-# Command: set-branch
+# 命令：set-branch
 # =============================================================================
 
 def cmd_set_branch(args: argparse.Namespace) -> int:
-    """Set git branch for task."""
+    """设置任务的 git 分支（branch）。"""
     repo_root = get_repo_root()
     target_dir = resolve_task_dir(args.dir, repo_root)
     branch = args.branch
 
     if not branch:
-        print(colored("Error: Missing arguments", Colors.RED))
-        print("Usage: py -3 task.py set-branch <task-dir> <branch-name>")
+        print(colored("错误：缺少参数", Colors.RED))
+        print("用法：py -3 task.py set-branch <task-dir> <branch-name>")
         return 1
 
     task_json = target_dir / FILE_TASK_JSON
     if not task_json.is_file():
-        print(colored(f"Error: task.json not found at {target_dir}", Colors.RED))
+        print(colored(f"错误：{target_dir} 中未找到 task.json", Colors.RED))
         return 1
 
     data = read_json(task_json)
@@ -596,31 +593,31 @@ def cmd_set_branch(args: argparse.Namespace) -> int:
     data["branch"] = branch
     write_json(task_json, data)
 
-    print(colored(f"✓ Branch set to: {branch}", Colors.GREEN))
+    print(colored(f"✓ 分支已设置为：{branch}", Colors.GREEN))
     return 0
 
 
 # =============================================================================
-# Command: set-base-branch
+# 命令：set-base-branch
 # =============================================================================
 
 def cmd_set_base_branch(args: argparse.Namespace) -> int:
-    """Set the base branch (PR target) for task."""
+    """设置任务的基础分支（PR 目标）。"""
     repo_root = get_repo_root()
     target_dir = resolve_task_dir(args.dir, repo_root)
     base_branch = args.base_branch
 
     if not base_branch:
-        print(colored("Error: Missing arguments", Colors.RED))
-        print("Usage: py -3 task.py set-base-branch <task-dir> <base-branch>")
-        print("Example: py -3 task.py set-base-branch <dir> develop")
+        print(colored("错误：缺少参数", Colors.RED))
+        print("用法：py -3 task.py set-base-branch <task-dir> <base-branch>")
+        print("示例：py -3 task.py set-base-branch <dir> develop")
         print()
-        print("This sets the target branch for PR (the branch your feature will merge into).")
+        print("设置 PR 的目标分支（你的 feature 分支将合并到的分支）。")
         return 1
 
     task_json = target_dir / FILE_TASK_JSON
     if not task_json.is_file():
-        print(colored(f"Error: task.json not found at {target_dir}", Colors.RED))
+        print(colored(f"错误：{target_dir} 中未找到 task.json", Colors.RED))
         return 1
 
     data = read_json(task_json)
@@ -630,29 +627,29 @@ def cmd_set_base_branch(args: argparse.Namespace) -> int:
     data["base_branch"] = base_branch
     write_json(task_json, data)
 
-    print(colored(f"✓ Base branch set to: {base_branch}", Colors.GREEN))
-    print(f"  PR will target: {base_branch}")
+    print(colored(f"✓ 基础分支已设置为：{base_branch}", Colors.GREEN))
+    print(f"  PR 目标分支：{base_branch}")
     return 0
 
 
 # =============================================================================
-# Command: set-scope
+# 命令：set-scope
 # =============================================================================
 
 def cmd_set_scope(args: argparse.Namespace) -> int:
-    """Set scope for PR title."""
+    """设置 PR 标题的范围（scope）。"""
     repo_root = get_repo_root()
     target_dir = resolve_task_dir(args.dir, repo_root)
     scope = args.scope
 
     if not scope:
-        print(colored("Error: Missing arguments", Colors.RED))
-        print("Usage: py -3 task.py set-scope <task-dir> <scope>")
+        print(colored("错误：缺少参数", Colors.RED))
+        print("用法：py -3 task.py set-scope <task-dir> <scope>")
         return 1
 
     task_json = target_dir / FILE_TASK_JSON
     if not task_json.is_file():
-        print(colored(f"Error: task.json not found at {target_dir}", Colors.RED))
+        print(colored(f"错误：{target_dir} 中未找到 task.json", Colors.RED))
         return 1
 
     data = read_json(task_json)
@@ -662,5 +659,5 @@ def cmd_set_scope(args: argparse.Namespace) -> int:
     data["scope"] = scope
     write_json(task_json, data)
 
-    print(colored(f"✓ Scope set to: {scope}", Colors.GREEN))
+    print(colored(f"✓ 范围已设置为：{scope}", Colors.GREEN))
     return 0

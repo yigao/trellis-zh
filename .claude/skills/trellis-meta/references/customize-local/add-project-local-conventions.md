@@ -1,27 +1,27 @@
-# Add Project-Local Conventions
+# 添加项目本地惯例
 
-Often the user does not need to change Trellis mechanics; they need local AI to understand their team's conventions. In that case, prefer `.trellis/spec/` or a project-local skill instead of editing `trellis-meta`.
+通常用户不需要更改 Trellis 机制；他们需要本地 AI 理解其团队的 convention（惯例）。在这种情况下，优先使用 `.trellis/spec/` 或项目本地 skill，而非编辑 `trellis-meta`。
 
-## Where To Put Things
+## 内容存放位置
 
-| Content type | Location |
+| 内容类型 | 位置 |
 | --- | --- |
-| Rules code must follow | `.trellis/spec/<layer>/` |
-| Cross-layer thinking methods | `.trellis/spec/guides/` |
-| AI capability for a project-specific flow | Platform-local skill |
-| One-off task material | `.trellis/tasks/<task>/` |
-| Session summary | `.trellis/workspace/<developer>/journal-N.md` |
+| 代码必须遵循的规则 | `.trellis/spec/<layer>/` |
+| 跨层级思考方法 | `.trellis/spec/guides/` |
+| 项目特定流程的 AI 能力 | 平台本地 skill |
+| 一次性任务材料 | `.trellis/tasks/<task>/` |
+| session（会话）摘要 | `.trellis/workspace/<developer>/journal-N.md` |
 
-## Create A Project-Local Skill
+## 创建项目本地 skill
 
-If the user wants AI to know "how this project customizes Trellis," create a local skill:
+如果用户希望 AI 了解"此项目如何自定义 Trellis"，请创建本地 skill：
 
 ```text
 .claude/skills/trellis-local/
 └── SKILL.md
 ```
 
-Example:
+示例：
 
 ```md
 ---
@@ -48,11 +48,11 @@ This skill documents this repository's Trellis customizations only.
 - ...
 ```
 
-For multi-platform projects, place equivalent versions in other platform skill directories, or use `.agents/skills/` for platforms that support the shared layer.
+对于多平台项目，在其他平台 skill 目录中放置等效版本，或对于支持共享层的平台使用 `.agents/skills/`。
 
-## Write To `.trellis/spec/`
+## 写入 `.trellis/spec/`
 
-If the content is a coding convention, write it to spec. Examples:
+如果内容是编码惯例，将其写入 spec。示例：
 
 ```text
 .trellis/spec/backend/error-handling.md
@@ -60,24 +60,24 @@ If the content is a coding convention, write it to spec. Examples:
 .trellis/spec/guides/cross-platform-thinking-guide.md
 ```
 
-After writing it, update the corresponding `index.md` so AI can find the new rule from the entry point.
+写入后，更新相应的 `index.md`，以便 AI 能从入口点找到新规则。
 
-## Make The Current Task Use New Conventions
+## 使当前任务使用新惯例
 
-After writing a spec, add it to the current task context:
+写入 spec 后，将其添加到当前任务 context（上下文）：
 
 ```bash
 py -3 ./.trellis/scripts/task.py add-context <task> implement ".trellis/spec/backend/error-handling.md" "Error handling conventions"
 py -3 ./.trellis/scripts/task.py add-context <task> check ".trellis/spec/backend/error-handling.md" "Review error handling"
 ```
 
-## Do Not Store Project-Private Rules In `trellis-meta`
+## 不要将项目私有规则存储在 `trellis-meta` 中
 
-`trellis-meta` is a public skill for understanding Trellis architecture and local customization entry points. Put project-private content in:
+`trellis-meta` 是一个用于理解 Trellis architecture（架构）和本地自定义入口点的公共 skill。将项目私有内容放在：
 
 - `.trellis/spec/`
-- a project-local skill
-- the current task
-- workspace journal
+- 项目本地 skill
+- 当前 task
+- workspace（工作区）journal（日志）
 
-This prevents future updates to Trellis's built-in `trellis-meta` from overwriting the team's own conventions.
+这样可以防止 Trellis 内置 `trellis-meta` 的未来更新覆盖团队自己的惯例。

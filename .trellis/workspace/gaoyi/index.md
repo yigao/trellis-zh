@@ -1,40 +1,40 @@
-# Workspace Index - gaoyi
+# 工作区索引 - gaoyi
 
-> Journal tracking for AI development sessions.
+> AI 开发 session 的日志追踪。
 
 ---
 
-## Current Status
+## 当前状态
 
 <!-- @@@auto:current-status -->
-- **Active File**: `journal-1.md`
-- **Total Sessions**: 0
-- **Last Active**: -
+- **活跃文件**：`journal-1.md`
+- **Session 总数**：0
+- **最后活跃**：-
 <!-- @@@/auto:current-status -->
 
 ---
 
-## Active Documents
+## 活跃文档
 
 <!-- @@@auto:active-documents -->
-| File | Lines | Status |
+| 文件 | 行数 | 状态 |
 |------|-------|--------|
-| `journal-1.md` | ~0 | Active |
+| `journal-1.md` | ~0 | 活跃 |
 <!-- @@@/auto:active-documents -->
 
 ---
 
-## Session History
+## Session 历史
 
 <!-- @@@auto:session-history -->
-| # | Date | Title | Commits | Branch |
+| # | 日期 | 标题 | 提交数 | 分支 |
 |---|------|-------|---------|--------|
 <!-- @@@/auto:session-history -->
 
 ---
 
-## Notes
+## 备注
 
-- Sessions are appended to journal files
-- New journal file created when current exceeds 2000 lines
-- Use `add_session.py` to record sessions
+- Session 按追加方式写入 journal 文件
+- 当前 journal 文件超过 2000 行时创建新文件
+- 使用 `add_session.py` 记录 session

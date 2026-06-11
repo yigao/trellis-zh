@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Task queue utility functions.
+任务队列工具函数。
 
-Provides:
-    list_tasks_by_status   - List tasks by status
-    list_pending_tasks     - List tasks with pending status
-    list_tasks_by_assignee - List tasks by assignee
-    list_my_tasks          - List tasks assigned to current developer
-    get_task_stats         - Get P0/P1/P2/P3 counts
+提供：
+    list_tasks_by_status   - 按状态列出任务
+    list_pending_tasks     - 列出待处理的任务
+    list_tasks_by_assignee - 按指派人列出任务
+    list_my_tasks          - 列出当前开发者（developer）的任务
+    get_task_stats         - 获取 P0/P1/P2/P3 优先级（priority）计数
 """
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ from .tasks import iter_active_tasks
 
 
 # =============================================================================
-# Internal helper
+# 内部辅助函数
 # =============================================================================
 
 def _task_to_dict(t) -> dict:
-    """Convert TaskInfo to the dict format callers expect."""
+    """将 TaskInfo 转换为调用方期望的字典格式。"""
     return {
         "priority": t.priority,
         "id": t.raw.get("id", ""),
@@ -41,21 +41,21 @@ def _task_to_dict(t) -> dict:
 
 
 # =============================================================================
-# Public Functions
+# 公共函数
 # =============================================================================
 
 def list_tasks_by_status(
     filter_status: str | None = None,
     repo_root: Path | None = None
 ) -> list[dict]:
-    """List tasks by status.
+    """按状态（status）列出任务。
 
     Args:
-        filter_status: Optional status filter.
-        repo_root: Repository root path. Defaults to auto-detected.
+        filter_status: 可选的状态过滤器。
+        repo_root: 仓库根目录路径。默认自动检测。
 
     Returns:
-        List of task info dicts with keys: priority, id, title, status, assignee.
+        任务信息字典列表，键包括：priority, id, title, status, assignee。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -72,13 +72,13 @@ def list_tasks_by_status(
 
 
 def list_pending_tasks(repo_root: Path | None = None) -> list[dict]:
-    """List pending tasks.
+    """列出待处理的任务。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认自动检测。
 
     Returns:
-        List of task info dicts.
+        任务信息字典列表。
     """
     return list_tasks_by_status("planning", repo_root)
 
@@ -88,15 +88,15 @@ def list_tasks_by_assignee(
     filter_status: str | None = None,
     repo_root: Path | None = None
 ) -> list[dict]:
-    """List tasks assigned to a specific developer.
+    """列出指派给特定开发者的任务。
 
     Args:
-        assignee: Developer name.
-        filter_status: Optional status filter.
-        repo_root: Repository root path. Defaults to auto-detected.
+        assignee: 开发者名称。
+        filter_status: 可选的状态过滤器。
+        repo_root: 仓库根目录路径。默认自动检测。
 
     Returns:
-        List of task info dicts.
+        任务信息字典列表。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -118,36 +118,36 @@ def list_my_tasks(
     filter_status: str | None = None,
     repo_root: Path | None = None
 ) -> list[dict]:
-    """List tasks assigned to current developer.
+    """列出当前开发者的任务。
 
     Args:
-        filter_status: Optional status filter.
-        repo_root: Repository root path. Defaults to auto-detected.
+        filter_status: 可选的状态过滤器。
+        repo_root: 仓库根目录路径。默认自动检测。
 
     Returns:
-        List of task info dicts.
+        任务信息字典列表。
 
     Raises:
-        ValueError: If developer not set.
+        ValueError: 如果开发者未设置。
     """
     if repo_root is None:
         repo_root = get_repo_root()
 
     developer = get_developer(repo_root)
     if not developer:
-        raise ValueError("Developer not set")
+        raise ValueError("开发者未设置")
 
     return list_tasks_by_assignee(developer, filter_status, repo_root)
 
 
 def get_task_stats(repo_root: Path | None = None) -> dict[str, int]:
-    """Get task statistics.
+    """获取任务统计信息。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认自动检测。
 
     Returns:
-        Dict with keys: P0, P1, P2, P3, Total.
+        字典，键包括：P0, P1, P2, P3, Total。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -164,25 +164,25 @@ def get_task_stats(repo_root: Path | None = None) -> dict[str, int]:
 
 
 def format_task_stats(stats: dict[str, int]) -> str:
-    """Format task stats as string.
+    """将任务统计信息格式化为字符串。
 
     Args:
-        stats: Stats dict from get_task_stats.
+        stats: 来自 get_task_stats 的统计字典。
 
     Returns:
-        Formatted string like "P0:0 P1:1 P2:2 P3:0 Total:3".
+        格式化后的字符串，如 "P0:0 P1:1 P2:2 P3:0 Total:3"。
     """
     return f"P0:{stats['P0']} P1:{stats['P1']} P2:{stats['P2']} P3:{stats['P3']} Total:{stats['Total']}"
 
 
 # =============================================================================
-# Main Entry (for testing)
+# 主入口（用于测试）
 # =============================================================================
 
 if __name__ == "__main__":
     stats = get_task_stats()
     print(format_task_stats(stats))
     print()
-    print("Pending tasks:")
+    print("待处理的任务：")
     for task in list_pending_tasks():
         print(f"  {task['priority']}|{task['id']}|{task['title']}|{task['status']}|{task['assignee']}")

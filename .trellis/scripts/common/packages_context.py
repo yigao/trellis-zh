@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Package discovery and context output.
+软件包发现和上下文输出。
 
-Provides:
-    get_packages_info           - Get structured package info
-    get_packages_section        - Build PACKAGES text section
-    get_context_packages_text   - Full packages text output (--mode packages)
-    get_context_packages_json   - Full packages JSON output (--mode packages --json)
+提供：
+    get_packages_info           - 获取结构化的软件包信息
+    get_packages_section        - 构建 PACKAGES 文本部分
+    get_context_packages_text   - 完整的软件包文本输出（--mode packages）
+    get_context_packages_json   - 完整的软件包 JSON 输出（--mode packages --json）
 """
 
 from __future__ import annotations
@@ -24,14 +24,14 @@ from .tasks import load_task
 
 
 # =============================================================================
-# Internal Helpers
+# 内部辅助函数
 # =============================================================================
 
 def _scan_spec_layers(spec_dir: Path, package: str | None = None) -> list[str]:
-    """Scan spec directory for available layers (subdirectories).
+    """扫描规范目录以获取可用的层（子目录）。
 
-    For monorepo: scans spec/<package>/
-    For single-repo: scans spec/
+    单仓库（monorepo）模式：扫描 spec/<package>/
+    单仓库模式：扫描 spec/
     """
     target = spec_dir / package if package else spec_dir
     if not target.is_dir():
@@ -42,7 +42,7 @@ def _scan_spec_layers(spec_dir: Path, package: str | None = None) -> list[str]:
 
 
 def _get_active_task_package(repo_root: Path) -> str | None:
-    """Get the package field from the active task's task.json."""
+    """从活动任务的 task.json 中获取 package 字段。"""
     current = get_current_task(repo_root)
     if not current:
         return None
@@ -56,7 +56,7 @@ def _resolve_scope_set(
     task_pkg: str | None,
     default_pkg: str | None,
 ) -> set | None:
-    """Resolve spec_scope to a set of allowed package names, or None for full scan."""
+    """将 spec_scope 解析为允许的软件包名称集合，或返回 None 表示完整扫描。"""
     if not packages:
         return None
 
@@ -74,7 +74,7 @@ def _resolve_scope_set(
         valid = {e for e in spec_scope if e in packages}
         if valid:
             return valid
-        # All invalid: fallback
+        # 全部无效：回退
         if task_pkg and task_pkg in packages:
             return {task_pkg}
         if default_pkg and default_pkg in packages:
@@ -85,15 +85,15 @@ def _resolve_scope_set(
 
 
 # =============================================================================
-# Public Functions
+# 公共函数
 # =============================================================================
 
 def get_packages_info(repo_root: Path) -> list[dict]:
-    """Get structured package info for monorepo projects.
+    """获取单仓库项目的结构化软件包信息。
 
-    Returns list of dicts with keys: name, path, type, default, specLayers,
-    isSubmodule, isGitRepo.
-    Returns empty list for single-repo projects.
+    返回字典列表，键为：name、path、type、default、specLayers、
+    isSubmodule、isGitRepo。
+    对于单仓库项目返回空列表。
     """
     packages = get_packages(repo_root)
     if not packages:
@@ -123,18 +123,18 @@ def get_packages_info(repo_root: Path) -> list[dict]:
 
 
 def get_packages_section(repo_root: Path) -> str:
-    """Build the PACKAGES section for text output."""
+    """构建文本输出的 PACKAGES 部分。"""
     spec_dir = repo_root / DIR_WORKFLOW / DIR_SPEC
     pkg_info = get_packages_info(repo_root)
 
     lines: list[str] = []
-    lines.append("## PACKAGES")
+    lines.append("## 软件包")
 
     if not pkg_info:
-        lines.append("(single-repo mode)")
+        lines.append("（单仓库模式）")
         layers = _scan_spec_layers(spec_dir)
         if layers:
-            lines.append(f"Spec layers: {', '.join(layers)}")
+            lines.append(f"规范层：{', '.join(layers)}")
         return "\n".join(lines)
 
     default_pkg = get_default_package(repo_root)
@@ -149,13 +149,13 @@ def get_packages_section(repo_root: Path) -> str:
         )
 
     if default_pkg:
-        lines.append(f"Default package: {default_pkg}")
+        lines.append(f"默认软件包：{default_pkg}")
 
     return "\n".join(lines)
 
 
 def get_context_packages_text(repo_root: Path | None = None) -> str:
-    """Get packages context as formatted text (for --mode packages)."""
+    """以格式化文本形式获取软件包上下文（用于 --mode packages）。"""
     if repo_root is None:
         repo_root = get_repo_root()
 
@@ -164,54 +164,54 @@ def get_context_packages_text(repo_root: Path | None = None) -> str:
 
     if not pkg_info:
         spec_dir = repo_root / DIR_WORKFLOW / DIR_SPEC
-        lines.append("Single-repo project (no packages configured)")
+        lines.append("单仓库项目（未配置软件包）")
         lines.append("")
         layers = _scan_spec_layers(spec_dir)
         if layers:
-            lines.append(f"Spec layers: {', '.join(layers)}")
+            lines.append(f"规范层：{', '.join(layers)}")
         return "\n".join(lines)
 
-    # Resolve scope for annotations
+    # 解析作用域以添加注解
     packages_dict = get_packages(repo_root) or {}
     default_pkg = get_default_package(repo_root)
     spec_scope = get_spec_scope(repo_root)
     task_pkg = _get_active_task_package(repo_root)
     scope_set = _resolve_scope_set(packages_dict, spec_scope, task_pkg, default_pkg)
 
-    lines.append("## PACKAGES")
+    lines.append("## 软件包")
     lines.append("")
     for pkg in pkg_info:
-        default_tag = " (default)" if pkg["default"] else ""
+        default_tag = "（默认）" if pkg["default"] else ""
         type_tag = f" [{pkg['type']}]" if pkg["type"] != "local" else ""
-        git_tag = " [git repo]" if pkg["isGitRepo"] else ""
+        git_tag = " [git 仓库]" if pkg["isGitRepo"] else ""
 
-        # Scope annotation
+        # 作用域注解
         scope_tag = ""
         if scope_set is not None and pkg["name"] not in scope_set:
-            scope_tag = " (out of scope)"
+            scope_tag = "（不在作用域内）"
 
         lines.append(f"### {pkg['name']}{default_tag}{type_tag}{git_tag}{scope_tag}")
-        lines.append(f"Path: {pkg['path']}")
+        lines.append(f"路径：{pkg['path']}")
         if pkg["specLayers"]:
-            lines.append(f"Spec layers: {', '.join(pkg['specLayers'])}")
+            lines.append(f"规范层：{', '.join(pkg['specLayers'])}")
             for layer in pkg["specLayers"]:
                 lines.append(f"  - .trellis/spec/{pkg['name']}/{layer}/index.md")
         else:
-            lines.append("Spec: not configured")
+            lines.append("规范：未配置")
         lines.append("")
 
-    # Also show shared guides
+    # 同时展示共享指南
     guides_dir = repo_root / DIR_WORKFLOW / DIR_SPEC / "guides"
     if guides_dir.is_dir():
-        lines.append("### Shared Guides (always included)")
-        lines.append("Path: .trellis/spec/guides/index.md")
+        lines.append("### 共享指南（始终包含）")
+        lines.append("路径：.trellis/spec/guides/index.md")
         lines.append("")
 
     return "\n".join(lines)
 
 
 def get_context_packages_json(repo_root: Path | None = None) -> dict:
-    """Get packages context as a dictionary (for --mode packages --json)."""
+    """以字典形式获取软件包上下文（用于 --mode packages --json）。"""
     if repo_root is None:
         repo_root = get_repo_root()
 

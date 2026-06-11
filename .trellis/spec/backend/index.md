@@ -1,38 +1,38 @@
-# Backend Development Guidelines
+# 后端开发指南
 
-> Best practices for backend development in this project.
-
----
-
-## Overview
-
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
+> 本项目 backend（后端）开发的最佳实践。
 
 ---
 
-## Guidelines Index
+## 概述
 
-| Guide | Description | Status |
+此目录包含 backend（后端）开发指南。在每个文件中填入你项目的具体 convention（惯例）。
+
+---
+
+## 指南索引
+
+| 指南 | 描述 | 状态 |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
+| [目录结构](./directory-structure.md) | 模块组织和文件布局 | 待填写 |
+| [数据库指南](./database-guidelines.md) | ORM pattern（模式）、查询、迁移 | 待填写 |
+| [错误处理](./error-handling.md) | 错误类型、处理策略 | 待填写 |
+| [质量指南](./quality-guidelines.md) | 代码标准、禁止的模式 | 待填写 |
+| [日志记录指南](./logging-guidelines.md) | 结构化日志记录、日志级别 | 待填写 |
 
 ---
 
-## How to Fill These Guidelines
+## 如何填写这些指南
 
-For each guideline file:
+对于每个指南文件：
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
+1. 记录你项目的**实际惯例**（而非理想状态）
+2. 包含来自你代码库的**代码示例**
+3. 列出**禁止的模式**及其原因
+4. 添加你的团队曾经犯过的**常见错误**
 
-The goal is to help AI assistants and new team members understand how YOUR project works.
+目标是帮助 AI 助手和新团队成员理解你的项目是如何运作的。
 
 ---
 
-**Language**: All documentation should be written in **English**.
+**语言**：所有文档应使用**英文**编写。

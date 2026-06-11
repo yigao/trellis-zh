@@ -1,29 +1,29 @@
 """
-Common utilities for Trellis workflow scripts.
+Trellis 工作流（workflow）脚本的公共工具。
 
-This module provides shared functionality used by other Trellis scripts.
+此模块提供其他 Trellis 脚本使用的共享功能。
 """
 
 import io
 import sys
 
 # =============================================================================
-# Windows Encoding Fix (MUST be at top, before any other output)
+# Windows 编码修复（必须放在最前面，在任何其他输出之前）
 # =============================================================================
-# On Windows, stdout defaults to the system code page (often GBK/CP936).
-# This causes UnicodeEncodeError when printing non-ASCII characters.
+# 在 Windows 上，stdout 默认使用系统代码页（通常为 GBK/CP936）。
+# 这会导致打印非 ASCII 字符时出现 UnicodeEncodeError。
 #
-# Any script that imports from common will automatically get this fix.
+# 任何从 common 导入的脚本都会自动获得此修复。
 # =============================================================================
 
 
 def _configure_stream(stream: object) -> object:
-    """Configure a stream for UTF-8 encoding on Windows."""
-    # Try reconfigure() first (Python 3.7+, more reliable)
+    """在 Windows 上配置流使用 UTF-8 编码。"""
+    # 首先尝试 reconfigure()（Python 3.7+，更可靠）
     if hasattr(stream, "reconfigure"):
         stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
         return stream
-    # Fallback: detach and rewrap with TextIOWrapper
+    # 回退方案：detach 后用 TextIOWrapper 重新包装
     elif hasattr(stream, "detach"):
         return io.TextIOWrapper(
             stream.detach(),  # type: ignore[union-attr]
@@ -41,12 +41,12 @@ if sys.platform == "win32":
 
 def configure_encoding() -> None:
     """
-    Configure stdout/stderr/stdin for UTF-8 encoding on Windows.
+    在 Windows 上配置 stdout/stderr/stdin 使用 UTF-8 编码。
 
-    This is automatically called when importing from common,
-    but can be called manually for scripts that don't import common.
+    当从 common 导入时会自动调用此函数，
+    但对于不导入 common 的脚本也可以手动调用。
 
-    Safe to call multiple times.
+    多次调用是安全的。
     """
     global sys
     if sys.platform == "win32":

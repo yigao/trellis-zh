@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Common path utilities for Trellis workflow.
+Trellis 工作流（workflow）的通用路径工具。
 
-Provides:
-    get_repo_root          - Get repository root directory
-    get_developer          - Get developer name
-    get_workspace_dir      - Get developer workspace directory
-    get_tasks_dir          - Get tasks directory
-    get_active_journal_file - Get current journal file
+提供：
+    get_repo_root          - 获取仓库（repository）根目录
+    get_developer          - 获取开发者（developer）名称
+    get_workspace_dir      - 获取开发者工作区（workspace）目录
+    get_tasks_dir          - 获取任务（task）目录
+    get_active_journal_file - 获取当前日志（journal）文件
 """
 
 from __future__ import annotations
@@ -18,10 +18,10 @@ from pathlib import Path
 
 
 # =============================================================================
-# Path Constants (change here to rename directories)
+# 路径常量（在此处修改以重命名目录）
 # =============================================================================
 
-# Directory names
+# 目录名称
 DIR_WORKFLOW = ".trellis"
 DIR_WORKSPACE = "workspace"
 DIR_TASKS = "tasks"
@@ -29,7 +29,7 @@ DIR_ARCHIVE = "archive"
 DIR_SPEC = "spec"
 DIR_SCRIPTS = "scripts"
 
-# File names
+# 文件名
 FILE_DEVELOPER = ".developer"
 FILE_CURRENT_TASK = ".current-task"
 FILE_TASK_JSON = "task.json"
@@ -37,19 +37,19 @@ FILE_JOURNAL_PREFIX = "journal-"
 
 
 # =============================================================================
-# Repository Root
+# 仓库根目录
 # =============================================================================
 
 def get_repo_root(start_path: Path | None = None) -> Path:
-    """Find the nearest directory containing .trellis/ folder.
+    """查找包含 .trellis/ 文件夹的最近目录。
 
-    This handles nested git repos correctly (e.g., test project inside another repo).
+    此函数正确处理嵌套 git 仓库的情况（例如，位于另一个仓库中的测试项目）。
 
     Args:
-        start_path: Starting directory to search from. Defaults to current directory.
+        start_path: 搜索的起始目录。默认为当前目录。
 
     Returns:
-        Path to repository root, or current directory if no .trellis/ found.
+        仓库根目录的路径，如果找不到 .trellis/ 则返回当前目录。
     """
     current = (start_path or Path.cwd()).resolve()
 
@@ -58,22 +58,22 @@ def get_repo_root(start_path: Path | None = None) -> Path:
             return current
         current = current.parent
 
-    # Fallback to current directory if no .trellis/ found
+    # 如果找不到 .trellis/，回退到当前目录
     return Path.cwd().resolve()
 
 
 # =============================================================================
-# Developer
+# 开发者
 # =============================================================================
 
 def get_developer(repo_root: Path | None = None) -> str | None:
-    """Get developer name from .developer file.
+    """从 .developer 文件获取开发者名称。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Developer name or None if not initialized.
+        开发者名称，如果未初始化则返回 None。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -95,29 +95,29 @@ def get_developer(repo_root: Path | None = None) -> str | None:
 
 
 def check_developer(repo_root: Path | None = None) -> bool:
-    """Check if developer is initialized.
+    """检查开发者是否已初始化。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        True if developer is initialized.
+        如果开发者已初始化则返回 True。
     """
     return get_developer(repo_root) is not None
 
 
 # =============================================================================
-# Tasks Directory
+# 任务目录
 # =============================================================================
 
 def get_tasks_dir(repo_root: Path | None = None) -> Path:
-    """Get tasks directory path.
+    """获取任务目录路径。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Path to tasks directory.
+        任务目录的路径。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -125,17 +125,17 @@ def get_tasks_dir(repo_root: Path | None = None) -> Path:
 
 
 # =============================================================================
-# Workspace Directory
+# 工作区目录
 # =============================================================================
 
 def get_workspace_dir(repo_root: Path | None = None) -> Path | None:
-    """Get developer workspace directory.
+    """获取开发者工作区目录。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Path to workspace directory or None if developer not set.
+        工作区目录的路径，如果开发者未设置则返回 None。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -147,17 +147,17 @@ def get_workspace_dir(repo_root: Path | None = None) -> Path | None:
 
 
 # =============================================================================
-# Journal File
+# 日志文件
 # =============================================================================
 
 def get_active_journal_file(repo_root: Path | None = None) -> Path | None:
-    """Get the current active journal file.
+    """获取当前活动日志文件。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Path to active journal file or None if not found.
+        活动日志文件的路径，如果未找到则返回 None。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -173,8 +173,8 @@ def get_active_journal_file(repo_root: Path | None = None) -> Path | None:
         if not f.is_file():
             continue
 
-        # Extract number from filename
-        name = f.stem  # e.g., "journal-1"
+        # 从文件名中提取编号
+        name = f.stem  # 例如 "journal-1"
         match = re.search(r"(\d+)$", name)
         if match:
             num = int(match.group(1))
@@ -186,13 +186,13 @@ def get_active_journal_file(repo_root: Path | None = None) -> Path | None:
 
 
 def count_lines(file_path: Path) -> int:
-    """Count lines in a file.
+    """统计文件中的行数。
 
     Args:
-        file_path: Path to file.
+        file_path: 文件路径。
 
     Returns:
-        Number of lines, or 0 if file doesn't exist.
+        行数，如果文件不存在则返回 0。
     """
     if not file_path.is_file():
         return 0
@@ -204,15 +204,15 @@ def count_lines(file_path: Path) -> int:
 
 
 # =============================================================================
-# Current Task Management
+# 当前任务管理
 # =============================================================================
 
 def normalize_task_ref(task_ref: str) -> str:
-    """Normalize a task ref for stable runtime storage.
+    """规范化任务引用以便稳定地运行时存储。
 
-    Stored refs should prefer repo-relative POSIX paths like
-    `.trellis/tasks/03-27-my-task`, even on Windows. Absolute paths are preserved
-    unless they can later be converted back to repo-relative form by callers.
+    存储的引用应优先使用仓库相对路径的 POSIX 格式，例如
+    `.trellis/tasks/03-27-my-task`，即使在 Windows 上也是如此。绝对路径会被保留，
+    除非调用方稍后可以将其转换回仓库相对路径的形式。
     """
     normalized = task_ref.strip()
     if not normalized:
@@ -233,7 +233,7 @@ def normalize_task_ref(task_ref: str) -> str:
 
 
 def resolve_task_ref(task_ref: str, repo_root: Path | None = None) -> Path | None:
-    """Resolve a task ref to an absolute task directory path."""
+    """将任务引用解析为绝对任务目录路径。"""
     if repo_root is None:
         repo_root = get_repo_root()
 
@@ -256,13 +256,13 @@ def get_current_task(
     platform_input: dict | None = None,
     platform: str | None = None,
 ) -> str | None:
-    """Get current task directory path (relative to repo_root).
+    """获取当前任务目录路径（相对于 repo_root）。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Relative path to current task directory or None.
+        当前任务目录的相对路径，如果没有则返回 None。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -277,13 +277,13 @@ def get_current_task_abs(
     platform_input: dict | None = None,
     platform: str | None = None,
 ) -> Path | None:
-    """Get current task directory absolute path.
+    """获取当前任务目录的绝对路径。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Absolute path to current task directory or None.
+        当前任务目录的绝对路径，如果没有则返回 None。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -299,7 +299,7 @@ def get_current_task_source(
     platform_input: dict | None = None,
     platform: str | None = None,
 ) -> tuple[str, str | None, str | None]:
-    """Get active task source as (`source`, `context_key`, `task_path`)."""
+    """获取活动任务来源，格式为 (`source`, `context_key`, `task_path`)。"""
     if repo_root is None:
         repo_root = get_repo_root()
 
@@ -314,14 +314,14 @@ def set_current_task(
     platform_input: dict | None = None,
     platform: str | None = None,
 ) -> bool:
-    """Set current task in session scope.
+    """在会话（session）范围内设置当前任务。
 
     Args:
-        task_path: Task directory path (relative to repo_root).
-        repo_root: Repository root path. Defaults to auto-detected.
+        task_path: 任务目录路径（相对于 repo_root）。
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        True on success, False on error.
+        成功返回 True，出错返回 False。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -341,13 +341,13 @@ def clear_current_task(
     platform_input: dict | None = None,
     platform: str | None = None,
 ) -> bool:
-    """Clear current task in session scope.
+    """在会话范围内清除当前任务。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        True on success.
+        成功返回 True。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -363,42 +363,42 @@ def clear_current_task(
 
 
 def has_current_task(repo_root: Path | None = None) -> bool:
-    """Check if has current task.
+    """检查是否有当前任务。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        True if current task is set.
+        如果已设置当前任务则返回 True。
     """
     return get_current_task(repo_root) is not None
 
 
 # =============================================================================
-# Task ID Generation
+# 任务 ID 生成
 # =============================================================================
 
 def generate_task_date_prefix() -> str:
-    """Generate task ID based on date (MM-DD format).
+    """基于日期生成任务 ID（MM-DD 格式）。
 
     Returns:
-        Date prefix string (e.g., "01-21").
+        日期前缀字符串（例如 "01-21"）。
     """
     return datetime.now().strftime("%m-%d")
 
 
 # =============================================================================
-# Monorepo / Package Paths
+# 单仓库（monorepo）/ 软件包（package）路径
 # =============================================================================
 
 
 def get_spec_dir(package: str | None = None, repo_root: Path | None = None) -> Path:
-    """Get the spec directory path.
+    """获取规范（spec）目录路径。
 
-    Single-repo: .trellis/spec
-    Monorepo with package: .trellis/spec/<package>
+    单仓库：.trellis/spec
+    带软件包的单仓库：.trellis/spec/<package>
 
-    Uses lazy import to avoid circular dependency with config.py.
+    使用惰性导入以避免与 config.py 的循环依赖。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -410,10 +410,10 @@ def get_spec_dir(package: str | None = None, repo_root: Path | None = None) -> P
 
 
 def get_package_path(package: str, repo_root: Path | None = None) -> Path | None:
-    """Get a package's source directory absolute path from config.
+    """从配置中获取软件包的源代码目录绝对路径。
 
     Returns:
-        Absolute path to the package directory, or None if not found.
+        软件包目录的绝对路径，如果未找到则返回 None。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -434,14 +434,14 @@ def get_package_path(package: str, repo_root: Path | None = None) -> Path | None
 
 
 # =============================================================================
-# Main Entry (for testing)
+# 主入口（用于测试）
 # =============================================================================
 
 if __name__ == "__main__":
     repo = get_repo_root()
-    print(f"Repository root: {repo}")
-    print(f"Developer: {get_developer(repo)}")
-    print(f"Tasks dir: {get_tasks_dir(repo)}")
-    print(f"Workspace dir: {get_workspace_dir(repo)}")
-    print(f"Journal file: {get_active_journal_file(repo)}")
-    print(f"Current task: {get_current_task(repo)}")
+    print(f"仓库根目录：{repo}")
+    print(f"开发者：{get_developer(repo)}")
+    print(f"任务目录：{get_tasks_dir(repo)}")
+    print(f"工作区目录：{get_workspace_dir(repo)}")
+    print(f"日志文件：{get_active_journal_file(repo)}")
+    print(f"当前任务：{get_current_task(repo)}")

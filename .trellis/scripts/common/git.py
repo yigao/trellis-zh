@@ -1,7 +1,7 @@
 """
-Git command execution utility.
+Git 命令执行工具。
 
-Single source of truth for running git commands across all Trellis scripts.
+所有 Trellis 脚本运行 git 命令的单一可信来源。
 """
 
 from __future__ import annotations
@@ -11,10 +11,10 @@ from pathlib import Path
 
 
 def run_git(args: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
-    """Run a git command and return (returncode, stdout, stderr).
+    """运行 git 命令并返回 (returncode, stdout, stderr)。
 
-    Uses UTF-8 encoding with -c i18n.logOutputEncoding=UTF-8 to ensure
-    consistent output across all platforms (Windows, macOS, Linux).
+    使用 UTF-8 编码和 -c i18n.logOutputEncoding=UTF-8 参数，
+    确保跨所有平台（Windows、macOS、Linux）的输出一致。
     """
     try:
         git_args = ["git", "-c", "i18n.logOutputEncoding=UTF-8"] + args

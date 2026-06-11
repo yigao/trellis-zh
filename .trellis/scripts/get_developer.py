@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Get current developer name.
+获取当前开发者名称。
 
-This is a wrapper that uses common/paths.py
+这是使用 common/paths.py 的包装器。
 """
 
 from __future__ import annotations
@@ -13,12 +13,12 @@ from common.paths import get_developer
 
 
 def main() -> None:
-    """CLI entry point."""
+    """命令行接口入口点。"""
     developer = get_developer()
     if developer:
         print(developer)
     else:
-        print("Developer not initialized", file=sys.stderr)
+        print("开发者未初始化", file=sys.stderr)
         sys.exit(1)
 
 

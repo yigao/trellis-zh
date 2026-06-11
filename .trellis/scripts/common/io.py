@@ -1,8 +1,8 @@
 """
-JSON file I/O utilities.
+JSON 文件 I/O 工具。
 
-Provides read_json and write_json as the single source of truth
-for JSON file operations across all Trellis scripts.
+提供 read_json 和 write_json 作为所有 Trellis 脚本中
+JSON 文件操作的唯一来源。
 """
 
 from __future__ import annotations
@@ -12,9 +12,9 @@ from pathlib import Path
 
 
 def read_json(path: Path) -> dict | None:
-    """Read and parse a JSON file.
+    """读取并解析 JSON 文件。
 
-    Returns None if the file doesn't exist, is invalid JSON, or can't be read.
+    如果文件不存在、JSON 无效或无法读取，返回 None。
     """
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -23,9 +23,9 @@ def read_json(path: Path) -> dict | None:
 
 
 def write_json(path: Path, data: dict) -> bool:
-    """Write dict to JSON file with pretty formatting.
+    """将 dict 写入 JSON 文件，使用美化格式。
 
-    Returns True on success, False on error.
+    成功返回 True，出错返回 False。
     """
     try:
         path.write_text(

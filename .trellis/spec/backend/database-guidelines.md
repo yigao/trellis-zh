@@ -1,51 +1,51 @@
-# Database Guidelines
+# 数据库指南
 
-> Database patterns and conventions for this project.
+> 本项目的 database（数据库）pattern（模式）和 convention（惯例）。
 
 ---
 
-## Overview
+## 概述
 
 <!--
-Document your project's database conventions here.
+在此处记录你项目的 database（数据库）惯例。
 
-Questions to answer:
-- What ORM/query library do you use?
-- How are migrations managed?
-- What are the naming conventions for tables/columns?
-- How do you handle transactions?
+需要回答的问题：
+- 你使用什么 ORM/查询库？
+- 迁移是如何管理的？
+- 表/列的命名惯例是什么？
+- 你如何处理事务？
 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Query Patterns
+## 查询模式
 
-<!-- How should queries be written? Batch operations? -->
+<!-- 查询应如何编写？批量操作？ -->
 
-(To be filled by the team)
-
----
-
-## Migrations
-
-<!-- How to create and run migrations -->
-
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Naming Conventions
+## 迁移
 
-<!-- Table names, column names, index names -->
+<!-- 如何创建和运行迁移 -->
 
-(To be filled by the team)
+（待团队填写）
 
 ---
 
-## Common Mistakes
+## 命名惯例
 
-<!-- Database-related mistakes your team has made -->
+<!-- 表名、列名、index（索引）名 -->
 
-(To be filled by the team)
+（待团队填写）
+
+---
+
+## 常见错误
+
+<!-- 你的团队曾经犯过的数据库相关错误 -->
+
+（待团队填写）

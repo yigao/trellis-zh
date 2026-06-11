@@ -1,57 +1,57 @@
-# Change Local Hooks
+# 更改本地 hook（钩子）
 
-Hooks are the automation layer that connects a platform to Trellis. When the user wants to change "when context is injected," "how shell commands inherit a session," or "which files are read before an agent starts," hooks are usually the edit point.
+Hook 是连接平台与 Trellis 的自动化层。当用户想要更改"何时注入上下文"、"shell 命令如何继承 session"或"agent 启动前读取哪些文件"时，hook 通常是编辑点。
 
-## Read These Files First
+## 首先读取这些文件
 
-1. Target platform settings/config, such as `.claude/settings.json`, `.codex/hooks.json`, `.cursor/hooks.json`
-2. Target platform hooks directory
+1. 目标平台设置/配置，如 `.claude/settings.json`、`.codex/hooks.json`、`.cursor/hooks.json`
+2. 目标平台 hook 目录
 3. `.trellis/scripts/common/active_task.py`
 4. `.trellis/scripts/common/session_context.py`
 5. `.trellis/workflow.md`
 
-## Common Hook Types
+## 常见 Hook 类型
 
-| Hook | Purpose |
+| Hook | 用途 |
 | --- | --- |
-| session-start | Injects a Trellis overview when a session starts, clears, or compacts. |
-| workflow-state | Injects a state hint on each user input. |
-| sub-agent context | Injects PRD/spec/research before an agent starts. |
-| shell session bridge | Lets `task.py` commands in shell see the same session identity. |
+| session-start | 在 session 启动、清除或压缩时注入 Trellis 概览。 |
+| workflow-state | 在每次用户输入时注入状态提示。 |
+| sub-agent context | 在 agent 启动前注入 PRD/spec/research。 |
+| shell session bridge | 让 shell 中的 `task.py` 命令能看到相同的 session 身份。 |
 
-## Modification Steps
+## 修改步骤
 
-1. Find the hook registration in settings/config.
-2. Confirm the registered script path exists.
-3. Read the hook script and identify inputs, outputs, and called `.trellis/scripts/`.
-4. Modify hook behavior.
-5. If the hook depends on workflow content, synchronize `.trellis/workflow.md`.
+1. 在设置/配置中找到 hook 注册。
+2. 确认注册的脚本路径存在。
+3. 读取 hook 脚本，识别输入、输出和所调用的 `.trellis/scripts/`。
+4. 修改 hook 行为。
+5. 如果 hook 依赖 workflow 内容，同步 `.trellis/workflow.md`。
 
-## Example: Change New-Session Injection Content
+## 示例：更改新 session 注入内容
 
-First find the session-start hook:
+首先找到 session-start hook：
 
 ```text
 .claude/settings.json
 .claude/hooks/session-start.py
 ```
 
-If the hook ultimately calls `.trellis/scripts/get_context.py` or `session_context.py`, editing the local script is usually more robust than hard-coding content in the hook.
+如果 hook 最终调用 `.trellis/scripts/get_context.py` 或 `session_context.py`，编辑本地脚本通常比在 hook 中硬编码内容更稳健。
 
-## Example: Agent Did Not Read JSONL
+## 示例：Agent 未读取 JSONL
 
-First confirm:
+首先确认：
 
 ```bash
 py -3 ./.trellis/scripts/task.py current --source
 py -3 ./.trellis/scripts/task.py validate <task>
 ```
 
-If the task and JSONL are correct, determine whether the platform uses hook push or agent pull. For hook push, edit `inject-subagent-context`; for agent pull, edit the agent file.
+如果 task 和 JSONL 正确，确定平台使用 hook 推送还是 agent 拉取模式。对于 hook 推送，编辑 `inject-subagent-context`；对于 agent 拉取，编辑 agent 文件。
 
-## Notes
+## 注意事项
 
-- Settings handle registration, hook scripts handle behavior; inspect both together.
-- Different platforms support different hook events. Do not directly copy another platform's settings.
-- Hooks should read project-local `.trellis/`; they should not depend on Trellis upstream source paths.
-- Hook failures should produce visible errors so AI does not silently lose context.
+- 设置负责注册，hook 脚本负责行为；两者需一起检查。
+- 不同平台支持不同的 hook 事件。不要直接复制另一个平台的设置。
+- Hook 应读取项目本地的 `.trellis/`；不应依赖 Trellis 上游源路径。
+- Hook 失败应产生可见的错误，以便 AI 不会静默丢失 context。

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Session Start Hook - Inject structured context
+会话启动钩子（Session Start Hook）- 注入结构化上下文
 """
 from __future__ import annotations
 
-# IMPORTANT: Suppress all warnings FIRST
+# 重要：在最开始就抑制所有警告
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -20,44 +20,43 @@ from pathlib import Path
 
 
 def _normalize_windows_shell_path(path_str: str) -> str:
-    """Normalize Unix-style shell paths to real Windows paths.
+    """将 Unix 风格 shell 路径规范化为实际 Windows 路径。
 
-    On Windows, shells like Git Bash / MSYS2 / Cygwin may report paths like
-    `/d/Users/...` or `/cygdrive/d/Users/...`. `Path.resolve()` will misinterpret
-    these as `D:/d/Users...` on drive D: (or similar), breaking repo root
-    detection.
+    在 Windows 上，Git Bash / MSYS2 / Cygwin 等 shell 可能报告类似
+    `/d/Users/...` 或 `/cygdrive/d/Users/...` 的路径。`Path.resolve()` 会
+    将其误解析为驱动器 D: 上的 `D:/d/Users...`（或类似），从而破坏仓库根目录
+    检测。
 
-    This function is intentionally conservative: it only rewrites patterns that
-    unambiguously represent a drive letter mount.
+    此函数有意保持保守：仅重写明确表示驱动器字母挂载的模式。
     """
     if not isinstance(path_str, str) or not path_str:
         return path_str
 
-    # Only relevant on Windows; keep other platforms untouched.
+    # 仅与 Windows 相关；其他平台保持不变。
     if not sys.platform.startswith("win"):
         return path_str
 
     p = path_str.strip()
 
-    # Already a Windows drive path (C:\... or C:/...)
+    # 已经是 Windows 驱动器路径（C:\... 或 C:/...）
     if re.match(r"^[A-Za-z]:[\/]", p):
         return p
 
-    # MSYS/Git-Bash style: /c/Users/... or /d/Work/...
+    # MSYS/Git-Bash 风格：/c/Users/... 或 /d/Work/...
     m = re.match(r"^/([A-Za-z])/(.*)", p)
     if m:
         drive, rest = m.group(1).upper(), m.group(2)
         rest = rest.replace('/', '\\')
         return f"{drive}:\\{rest}"
 
-    # Cygwin style: /cygdrive/c/Users/...
+    # Cygwin 风格：/cygdrive/c/Users/...
     m = re.match(r"^/cygdrive/([A-Za-z])/(.*)", p)
     if m:
         drive, rest = m.group(1).upper(), m.group(2)
         rest = rest.replace('/', '\\')
         return f"{drive}:\\{rest}"
 
-    # WSL mounted drive (sometimes leaked into env): /mnt/c/Users/...
+    # WSL 挂载的驱动器（有时泄露到环境变量中）：/mnt/c/Users/...
     m = re.match(r"^/mnt/([A-Za-z])/(.*)", p)
     if m:
         drive, rest = m.group(1).upper(), m.group(2)
@@ -68,16 +67,16 @@ def _normalize_windows_shell_path(path_str: str) -> str:
 
 
 FIRST_REPLY_NOTICE = """<first-reply-notice>
-On the first visible assistant reply in this session, begin with exactly one short Chinese sentence:
+在本会话的首次可见助手回复中，请以恰好一句简短的中文开头：
 Trellis SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。
-Then continue directly with the user's request. This notice is one-shot: do not repeat it after the first assistant reply in the same session.
+然后直接继续处理用户请求。此通知仅一次生效：同会话中首次助手回复后不再重复。
 </first-reply-notice>"""
 
-# Force UTF-8 on stdin/stdout/stderr on Windows. Default codepage there is
-# cp936 / cp1252 / etc. — non-ASCII content (Chinese task names, prd snippets)
-# both in stdin (hook payload from host CLI) and stdout (our emitted blocks)
-# raises UnicodeDecodeError / UnicodeEncodeError. Equivalent to `python -X utf8`
-# but applied per-stream so we don't depend on host CLI's command wiring.
+# 在 Windows 上强制 stdin/stdout/stderr 使用 UTF-8。默认编码页是
+# cp936 / cp1252 等 — 非 ASCII 内容（中文任务名、prd 片段）
+# 在 stdin（来自宿主 CLI 的 hook 负载）和 stdout（我们输出的块）
+# 上都会引发 UnicodeDecodeError / UnicodeEncodeError。等价于 `python -X utf8`
+# 但按流逐一应用，这样就不依赖宿主 CLI 的命令接线方式。
 if sys.platform.startswith("win"):
     import io as _io
     for _stream_name in ("stdin", "stdout", "stderr"):
@@ -98,12 +97,11 @@ if sys.platform.startswith("win"):
 
 
 def _has_curated_jsonl_entry(jsonl_path: Path) -> bool:
-    """Return True iff jsonl has at least one row with a ``file`` field.
+    """当 JSONL 至少有一行包含 ``file`` 字段时返回 True。
 
-    A freshly seeded jsonl only contains a ``{"_example": ...}`` row (no
-    ``file`` key) — that is NOT "ready". Readiness requires at least one
-    curated entry. Matches the contract used by hook-inject and pull-based
-    sub-agent context loaders.
+    新创建的种子 JSONL 仅包含一行 ``{"_example": ...}``（无 ``file``
+    键）— 这不算"就绪"。就绪要求至少有一个已整理的条目。
+    与 hook-inject 和基于拉取的子智能体上下文加载器使用的约定一致。
     """
     try:
         for line in jsonl_path.read_text(encoding="utf-8").splitlines():
@@ -122,8 +120,8 @@ def _has_curated_jsonl_entry(jsonl_path: Path) -> bool:
 
 
 def should_skip_injection() -> bool:
-    """Check if any platform's non-interactive flag is set, or if Trellis
-    hooks are explicitly disabled via TRELLIS_HOOKS=0 / TRELLIS_DISABLE_HOOKS=1.
+    """检查是否有任何平台的非交互式标志被设置，或 Trellis hooks
+    是否通过 TRELLIS_HOOKS=0 / TRELLIS_DISABLE_HOOKS=1 被显式禁用。
     """
     if os.environ.get("TRELLIS_HOOKS") == "0":
         return True
@@ -195,12 +193,12 @@ def _resolve_context_key(trellis_dir: Path, input_data: dict) -> str | None:
 
 
 def _persist_context_key_for_bash(context_key: str | None) -> None:
-    """Expose Trellis session identity to later Claude Code Bash commands.
+    """将 Trellis 会话身份暴露给后续的 Claude Code Bash 命令。
 
-    Claude Code SessionStart hooks can append exports to CLAUDE_ENV_FILE; those
-    variables are then available to Bash tools in the same conversation. Without
-    this bridge, `task.py start` has hook stdin during SessionStart but no
-    session identity when the AI later runs it as a normal shell command.
+    Claude Code 的 SessionStart hook 可以向 CLAUDE_ENV_FILE 追加导出语句；
+    这些环境变量随后在同一对话中的 Bash 工具中可用。没有这个桥接，
+    `task.py start` 在 SessionStart 期间有 hook stdin，但在 AI 稍后以
+    普通 shell 命令运行它时却没有会话身份。
     """
     if not context_key:
         return
@@ -230,7 +228,7 @@ def _resolve_active_task(trellis_dir: Path, input_data: dict):
 def run_script(script_path: Path, context_key: str | None = None) -> str:
     try:
         if script_path.suffix == ".py":
-            # Add PYTHONIOENCODING to force UTF-8 in subprocess
+            # 添加 PYTHONIOENCODING 强制子进程使用 UTF-8
             env = os.environ.copy()
             env["PYTHONIOENCODING"] = "utf-8"
             if context_key:
@@ -252,9 +250,9 @@ def run_script(script_path: Path, context_key: str | None = None) -> str:
             cwd=script_path.parent.parent.parent,
             env=env,
         )
-        return result.stdout if result.returncode == 0 else "No context available"
+        return result.stdout if result.returncode == 0 else "无可用上下文"
     except (subprocess.TimeoutExpired, FileNotFoundError, PermissionError):
-        return "No context available"
+        return "无可用上下文"
 
 
 def _normalize_task_ref(task_ref: str) -> str:
@@ -287,44 +285,44 @@ def _resolve_task_dir(trellis_dir: Path, task_ref: str) -> Path:
 
 
 def _get_task_status(trellis_dir: Path, input_data: dict) -> str:
-    """Check current task status and return structured status string with explicit next action.
+    """检查当前任务状态并返回结构化的状态字符串，包含明确的下一步操作。
 
-    Returns a block with three fields:
-    - Status: current state
-    - Task: task identifier (when applicable)
-    - Next-Action: explicit skill/command/tool call the AI should invoke
+    返回一个包含三个字段的块：
+    - Status: 当前状态
+    - Task: 任务标识符（如适用）
+    - Next-Action: AI 应调用的显式 skill/command/tool 操作
     """
     active = _resolve_active_task(trellis_dir, input_data)
 
-    # Case 1: No active task — waiting for user to describe intent
+    # 情况 1：没有活动任务 — 等待用户描述意图
     if not active.task_path:
         return (
             "Status: NO ACTIVE TASK\n"
             f"Source: {active.source}\n"
-            "Next-Action: After the user describes their intent, load skill `trellis-brainstorm` "
-            "to clarify requirements and create a task via `py -3 ./.trellis/scripts/task.py create`.\n"
-            "Research reminder: for research-heavy tasks (comparing tools, reading external docs, "
-            "cross-platform surveys), spawn `trellis-research` sub-agents via the Task tool — "
-            "they persist findings to `{TASK_DIR}/research/*.md` and keep main context clean. "
-            "Do NOT do 10+ inline WebFetch/WebSearch in the main conversation.\n"
-            "User override (per-turn escape hatch): if the user's first message explicitly opts "
-            "out of the workflow (\"跳过 trellis\" / \"别走流程\" / \"小修一下\" / \"直接改\" / "
-            "\"skip trellis\" / \"no task\" / \"just do it\"), honor it for this turn — "
-            "acknowledge briefly and proceed without creating a task. Per-turn only."
+            "Next-Action: 用户描述意图后，加载 skill `trellis-brainstorm` "
+            "明确需求，并通过 `py -3 ./.trellis/scripts/task.py create` 创建任务。\n"
+            "研究提醒：对于研究密集型任务（工具对比、阅读外部文档、"
+            "跨平台调研），通过 Task 工具派生 `trellis-research` 子智能体 — "
+            "它们将发现持久化到 `{TASK_DIR}/research/*.md`，保持主上下文干净。"
+            "不要在主线对话中执行 10 次以上的 WebFetch/WebSearch。\n"
+            "用户覆盖（每轮逃生舱）：如果用户的首条消息明确表示跳过工作流"
+            "（\"跳过 trellis\" / \"别走流程\" / \"小修一下\" / \"直接改\" / "
+            "\"skip trellis\" / \"no task\" / \"just do it\"），本轮遵从 — "
+            "简要确认后直接处理，不创建任务。仅本轮有效。"
         )
 
-    # Case 2: Stale pointer — task dir was deleted
+    # 情况 2：过期指针 — 任务目录已被删除
     task_ref = active.task_path
     task_dir = _resolve_task_dir(trellis_dir, task_ref)
     if active.stale or not task_dir.is_dir():
         return (
             f"Status: STALE POINTER\nTask: {task_ref}\n"
             f"Source: {active.source}\n"
-            f"Next-Action: Run `py -3 ./.trellis/scripts/task.py finish` to clear the stale pointer, "
-            "then ask the user what to work on next."
+            f"Next-Action: 运行 `py -3 ./.trellis/scripts/task.py finish` 清除过期指针，"
+            "然后询问用户接下来要做什么。"
         )
 
-    # Read task.json
+    # 读取 task.json
     task_json_path = task_dir / "task.json"
     task_data = {}
     if task_json_path.is_file():
@@ -336,68 +334,68 @@ def _get_task_status(trellis_dir: Path, input_data: dict) -> str:
     task_title = task_data.get("title", task_ref)
     task_status = task_data.get("status", "unknown")
 
-    # Case 3: Task completed — time to archive
+    # 情况 3：任务已完成 — 需要归档
     if task_status == "completed":
         return (
             f"Status: COMPLETED\nTask: {task_title}\n"
             f"Source: {active.source}\n"
-            f"Next-Action: Load skill `trellis-update-spec` to capture learnings, "
-            f"then archive with `py -3 ./.trellis/scripts/task.py archive {task_dir.name}`."
+            f"Next-Action: 加载 skill `trellis-update-spec` 捕获经验教训，"
+            f"然后通过 `py -3 ./.trellis/scripts/task.py archive {task_dir.name}` 归档。"
         )
 
     has_prd = (task_dir / "prd.md").is_file()
 
-    # Case 4: No PRD — still in Plan phase
+    # 情况 4：没有 PRD — 仍处于规划（Plan）阶段
     if not has_prd:
         return (
             f"Status: PLANNING\nTask: {task_title}\n"
             f"Source: {active.source}\n"
-            "Next-Action: Load skill `trellis-brainstorm` to clarify requirements with the user "
-            "and produce prd.md in the task directory.\n"
-            "Research reminder: when the task needs external research (tool comparison, docs, "
-            "conventions survey), spawn `trellis-research` sub-agents — don't WebFetch/WebSearch "
-            "inline in the main session. Findings go to `{task_dir}/research/*.md`; PRD only links to them."
+            "Next-Action: 加载 skill `trellis-brainstorm` 与用户明确需求，"
+            "并在任务目录中生成 prd.md。\n"
+            "研究提醒：当任务需要外部研究时（工具对比、文档、"
+            "约定调研），派生 `trellis-research` 子智能体 — 不要在主线会话中"
+            "内联调用 WebFetch/WebSearch。发现结果写入 `{task_dir}/research/*.md`；PRD 仅链接到它们。"
         )
 
-    # Case 4b: PRD exists but implement.jsonl has only seed (no curated entries) — Phase 1.3 gate
+    # 情况 4b：PRD 存在但 implement.jsonl 只有种子数据（无整理条目）— 阶段 1.3 门槛
     implement_jsonl = task_dir / "implement.jsonl"
     if implement_jsonl.is_file() and not _has_curated_jsonl_entry(implement_jsonl):
         return (
             f"Status: PLANNING (Phase 1.3)\nTask: {task_title}\n"
             f"Source: {active.source}\n"
-            "Next-Action: Curate `implement.jsonl` and `check.jsonl` with the spec + research files "
-            "the Phase 2 sub-agents will need. Only spec paths (`.trellis/spec/**/*.md`) and research "
-            "files (`{TASK_DIR}/research/*.md`) — no code paths. Run "
-            "`py -3 ./.trellis/scripts/get_context.py --mode packages` to list available specs, "
-            "then edit the jsonl files or use `py -3 ./.trellis/scripts/task.py add-context`. "
-            "See `.trellis/workflow.md` Phase 1.3 for details."
+            "Next-Action: 整理 `implement.jsonl` 和 `check.jsonl`，填入阶段 2 子智能体"
+            "需要的 spec 和研究文件。仅限 spec 路径（`.trellis/spec/**/*.md`）和研究"
+            "文件（`{TASK_DIR}/research/*.md`）— 不包含代码路径。运行"
+            "`py -3 ./.trellis/scripts/get_context.py --mode packages` 列出可用 spec，"
+            "然后编辑 jsonl 文件或使用 `py -3 ./.trellis/scripts/task.py add-context`。"
+            "详见 `.trellis/workflow.md` 阶段 1.3。"
         )
 
-    # Case 5: PRD + curated jsonl (or agent-less platform with no jsonl) — enter Execute phase
+    # 情况 5：PRD + 已整理的 jsonl（或无 jsonl 的无智能体平台）— 进入执行（Execute）阶段
     return (
         f"Status: READY\nTask: {task_title}\n"
         f"Source: {active.source}\n"
-        "Next required action: dispatch `trellis-implement` per Phase 2.1. "
-        "For agent-capable platforms, the default is to NOT edit code in the main session. "
-        "After implementation, dispatch `trellis-check` per Phase 2.2 before reporting completion.\n"
-        "Sub-agent roster: `trellis-implement` (writes code), `trellis-check` (verifies + self-fixes), "
-        "`trellis-research` (persists findings to `research/*.md` — use when you'd otherwise do "
-        "multiple WebFetch/WebSearch inline).\n"
-        "Sub-agent self-exemption: if you are reading this as a `trellis-implement` or "
-        "`trellis-check` sub-agent (your own role / agent name reflects that), this dispatch "
-        "instruction does NOT apply to you — you are already the dispatched sub-agent. "
-        "Implement / check directly without spawning another sub-agent of the same kind.\n"
-        "User override (per-turn escape hatch): if the user's CURRENT message explicitly tells the "
-        "main session to handle it directly (\"你直接改\" / \"别派 sub-agent\" / \"main session 写就行\" / "
-        "\"do it inline\" / \"不用 sub-agent\"), honor it for this turn and edit code directly. "
-        "Per-turn only; do NOT invent an override the user did not say."
+        "Next required action: 按阶段 2.1 调度 `trellis-implement`。"
+        "对于支持智能体的平台，默认不在主线会话中编辑代码。"
+        "实现完成后，按阶段 2.2 调度 `trellis-check`，再报告完成。\n"
+        "子智能体列表：`trellis-implement`（编写代码）、`trellis-check`（验证 + 自修复）、"
+        "`trellis-research`（将发现持久化到 `research/*.md` — 当需要多次内联"
+        "WebFetch/WebSearch 时使用）。\n"
+        "子智能体自我豁免：如果你作为 `trellis-implement` 或"
+        "`trellis-check` 子智能体（你的角色 / 智能体名称反映了这一点）正在阅读此内容，"
+        "则此调度指令对你不适用 — 你已经是已调度的子智能体。"
+        "直接实现/检查，不要再次派生同类型的子智能体。\n"
+        "用户覆盖（每轮逃生舱）：如果用户当前消息明确要求主线会话直接处理"
+        "（\"你直接改\" / \"别派 sub-agent\" / \"main session 写就行\" / "
+        "\"do it inline\" / \"不用 sub-agent\"），本轮遵从并直接编辑代码。"
+        "仅本轮有效；不要编造用户没有说过的覆盖指令。"
     )
 
 
 def _load_trellis_config(trellis_dir: Path, input_data: dict) -> tuple:
-    """Load Trellis config for session-start decisions.
+    """加载 Trellis 配置用于会话启动决策。
 
-    Returns:
+    返回值：
         (is_mono, packages_dict, spec_scope, task_pkg, default_pkg)
     """
     scripts_dir = trellis_dir / "scripts"
@@ -413,7 +411,7 @@ def _load_trellis_config(trellis_dir: Path, input_data: dict) -> tuple:
         packages = get_packages(repo_root) or {}
         scope = get_spec_scope(repo_root)
 
-        # Get active task's package
+        # 获取活动任务的 package
         task_pkg = None
         current = get_current_task(
             repo_root,
@@ -439,9 +437,9 @@ def _load_trellis_config(trellis_dir: Path, input_data: dict) -> tuple:
 
 
 def _check_legacy_spec(trellis_dir: Path, is_mono: bool, packages: dict) -> str | None:
-    """Check for legacy spec directory structure in monorepo.
+    """检查 monorepo 中是否存在旧版 spec 目录结构。
 
-    Returns warning message if legacy structure detected, None otherwise.
+    如果检测到旧版结构则返回警告消息，否则返回 None。
     """
     if not is_mono or not packages:
         return None
@@ -450,7 +448,7 @@ def _check_legacy_spec(trellis_dir: Path, is_mono: bool, packages: dict) -> str 
     if not spec_dir.is_dir():
         return None
 
-    # Check for legacy flat spec dirs (spec/backend/, spec/frontend/ with index.md)
+    # 检查旧版扁平 spec 目录（spec/backend/、spec/frontend/ 含 index.md）
     has_legacy = False
     for legacy_name in ("backend", "frontend"):
         legacy_dir = spec_dir / legacy_name
@@ -461,26 +459,26 @@ def _check_legacy_spec(trellis_dir: Path, is_mono: bool, packages: dict) -> str 
     if not has_legacy:
         return None
 
-    # Check which packages are missing spec/<pkg>/ directory
+    # 检查哪些 package 缺少 spec/<pkg>/ 目录
     missing = [
         name for name in sorted(packages.keys())
         if not (spec_dir / name).is_dir()
     ]
 
     if not missing:
-        return None  # All packages have spec dirs
+        return None  # 所有 package 都有 spec 目录
 
     if len(missing) == len(packages):
         return (
-            f"[!] Legacy spec structure detected: found `spec/backend/` or `spec/frontend/` "
-            f"but no package-scoped `spec/<package>/` directories.\n"
+            f"[!] 检测到旧版 spec 结构：找到 `spec/backend/` 或 `spec/frontend/` "
+            f"但没有以 package 为作用域的 `spec/<package>/` 目录。\n"
             f"Monorepo packages: {', '.join(sorted(packages.keys()))}\n"
-            f"Please reorganize: `spec/backend/` -> `spec/<package>/backend/`"
+            f"请重组：`spec/backend/` -> `spec/<package>/backend/`"
         )
     return (
-        f"[!] Partial spec migration detected: packages {', '.join(missing)} "
-        f"still missing `spec/<pkg>/` directory.\n"
-        f"Please complete migration for all packages."
+        f"[!] 检测到部分 spec 迁移：packages {', '.join(missing)} "
+        f"仍然缺少 `spec/<pkg>/` 目录。\n"
+        f"请完成所有 package 的迁移。"
     )
 
 
@@ -491,23 +489,23 @@ def _resolve_spec_scope(
     task_pkg: str | None,
     default_pkg: str | None,
 ) -> set | None:
-    """Resolve which packages should have their specs injected.
+    """解析哪些 package 的 spec 应被注入。
 
-    Returns:
-        Set of package names to include, or None for full scan.
+    返回值：
+        要包含的 package 名称集合，或 None 表示全量扫描。
     """
     if not is_mono or not packages:
-        return None  # Single-repo: full scan
+        return None  # 单仓库：全量扫描
 
     if scope is None:
-        return None  # No scope configured: full scan
+        return None  # 未配置作用域：全量扫描
 
     if isinstance(scope, str) and scope == "active_task":
         if task_pkg and task_pkg in packages:
             return {task_pkg}
         if default_pkg and default_pkg in packages:
             return {default_pkg}
-        return None  # Fallback to full scan
+        return None  # 回退到全量扫描
 
     if isinstance(scope, list):
         valid = set()
@@ -516,39 +514,39 @@ def _resolve_spec_scope(
                 valid.add(entry)
             else:
                 print(
-                    f"Warning: spec_scope contains unknown package: {entry}, ignoring",
+                    f"警告: spec_scope 包含未知 package: {entry}，已忽略",
                     file=sys.stderr,
                 )
 
         if valid:
-            # Warn if active task is out of scope
+            # 如果活动任务不在作用域内则警告
             if task_pkg and task_pkg not in valid:
                 print(
-                    f"Warning: active task package '{task_pkg}' is out of configured spec_scope",
+                    f"警告: 活动任务 package '{task_pkg}' 不在配置的 spec_scope 范围内",
                     file=sys.stderr,
                 )
             return valid
 
-        # All entries invalid: fallback chain
+        # 所有条目无效：回退链
         print(
-            "Warning: all spec_scope entries invalid, falling back to task/default/full",
+            "警告: 所有 spec_scope 条目无效，回退到 task/default/full",
             file=sys.stderr,
         )
         if task_pkg and task_pkg in packages:
             return {task_pkg}
         if default_pkg and default_pkg in packages:
             return {default_pkg}
-        return None  # Full scan
+        return None  # 全量扫描
 
-    return None  # Unknown scope type: full scan
+    return None  # 未知作用域类型：全量扫描
 
 
 def _extract_range(content: str, start_header: str, end_header: str) -> str:
-    """Extract lines starting at `## start_header` up to (but excluding) `## end_header`.
+    """从 `## start_header` 开始提取行，直到（但不包括）`## end_header`。
 
-    Both parameters are full header lines WITHOUT the `## ` prefix (e.g. "Phase Index").
-    Returns empty string if start header is not found.
-    End header missing → extracts to end of file.
+    两个参数都是不含 `## ` 前缀的完整标题行（例如 "Phase Index"）。
+    如果找不到起始标题则返回空字符串。
+    结束标题缺失 → 提取到文件末尾。
     """
     lines = content.splitlines()
     start: int | None = None
@@ -575,56 +573,53 @@ _BREADCRUMB_TAG_RE = re.compile(
 
 
 def _strip_breadcrumb_tag_blocks(content: str) -> str:
-    """Remove `[workflow-state:STATUS]...[/workflow-state:STATUS]` blocks.
+    """移除 `[workflow-state:STATUS]...[/workflow-state:STATUS]` 块。
 
-    The tag blocks live inside `## Phase Index` (since v0.5.0-rc.0, when
-    they were colocated with their phase summaries) and are consumed by the
-    UserPromptSubmit hook (`inject-workflow-state.py`). The session-start
-    payload already covers the full step bodies, so re-inlining the
-    breadcrumbs here would just duplicate context.
+    标签块位于 `## Phase Index` 内部（自 v0.5.0-rc.0 起，它们与阶段摘要
+    放在一起），由 UserPromptSubmit hook（`inject-workflow-state.py`）消费。
+    会话启动负载已覆盖完整的步骤正文，所以此处再内联面包屑只会重复上下文。
     """
     return _BREADCRUMB_TAG_RE.sub("", content)
 
 
 def _build_workflow_overview(workflow_path: Path) -> str:
-    """Inject the workflow guide for the session.
+    """为会话注入工作流指南。
 
-    Contents:
-      1. Section index (all `## ` headings — navigation)
-      2. Phase Index section (rules, skill routing table, anti-rationalization table)
-      3. Phase 1/2/3 step-level details (the actual how-to for each step)
+    内容：
+      1. 章节索引（所有 `## ` 标题 — 导航）
+      2. Phase Index 章节（规则、skill 路由表、反合理化表）
+      3. 阶段 1/2/3 步骤级详情（每个步骤的实际操作指南）
 
-    The meta sections (Core Principles / Trellis System / Customizing
-    Trellis) are NOT injected — Core Principles is short prose the AI can
-    Read on demand; Trellis System lists reference commands duplicated in
-    step bodies; Customizing Trellis is for forks. Workflow-state breadcrumb
-    tag blocks (which now live inside Phase Index since v0.5.0-rc.0) are
-    stripped from the extracted range — they're consumed by the
-    UserPromptSubmit hook, not the session-start preamble.
+    元章节（Core Principles / Trellis System / Customizing
+    Trellis）不会被注入 — Core Principles 是简短散文，AI 可以按需
+    Read；Trellis System 列出了已在步骤正文中重复的参考命令；
+    Customizing Trellis 是给 fork 用户看的。工作流状态面包屑标签块
+    （自 v0.5.0-rc.0 起位于 Phase Index 内部）从提取范围中剥离 —
+    它们由 UserPromptSubmit hook 消费，而非会话启动前言。
 
-    Total budget: Phase Index ~2 KB + Phase 1/2/3 ~7 KB = ~9 KB.
+    总预算：Phase Index ~2 KB + 阶段 1/2/3 ~7 KB = ~9 KB。
     """
     content = read_file(workflow_path)
     if not content:
-        return "No workflow.md found"
+        return "未找到 workflow.md"
 
     out_lines = [
-        "# Development Workflow — Section Index",
-        "Full guide: .trellis/workflow.md  (read on demand)",
+        "# 开发工作流 — 章节索引",
+        "完整指南: .trellis/workflow.md  （按需读取）",
         "",
-        "## Table of Contents",
+        "## 目录",
     ]
     for line in content.splitlines():
         if line.startswith("## "):
             out_lines.append(line)
     out_lines += ["", "---", ""]
 
-    # Extract Phase Index through the end of Phase 3 (before "Customizing
-    # Trellis" — the docs-for-forks footer added in v0.5.0-rc.0). Since
-    # sections appear in order Phase Index → Phase 1 → Phase 2 → Phase 3 →
-    # Customizing Trellis, a single range grab captures all four. The
-    # breadcrumb tag blocks now embedded inside Phase Index are stripped so
-    # they don't duplicate the per-turn UserPromptSubmit injection.
+    # 提取 Phase Index 到阶段 3 末尾（在 "Customizing Trellis（for forks）"
+    # 之前 — v0.5.0-rc.0 中新增的 fork 用户文档页脚）。
+    # 由于章节按 Phase Index → Phase 1 → Phase 2 → Phase 3 →
+    # Customizing Trellis 的顺序出现，一次范围抓取即可捕获全部四个。
+    # 嵌入 Phase Index 内部的面包屑标签块被剥离，以免与每轮
+    # UserPromptSubmit 注入重复。
     phases = _extract_range(
         content, "Phase Index", "Customizing Trellis (for forks)"
     )
@@ -645,7 +640,7 @@ def main():
     except (json.JSONDecodeError, ValueError):
         hook_input = {}
 
-    # Try platform-specific env vars, hook cwd, fallback to cwd
+    # 尝试平台特定的环境变量、hook cwd，回退到当前工作目录
     project_dir_env_vars = [
         "CLAUDE_PROJECT_DIR",
         "QODER_PROJECT_DIR",
@@ -669,7 +664,7 @@ def main():
     context_key = _resolve_context_key(trellis_dir, hook_input)
     _persist_context_key_for_bash(context_key)
 
-    # Load config for scope filtering and legacy detection
+    # 加载配置用于作用域过滤和旧版检测
     is_mono, packages, scope_config, task_pkg, default_pkg = _load_trellis_config(
         trellis_dir,
         hook_input,
@@ -679,15 +674,15 @@ def main():
     output = StringIO()
 
     output.write("""<session-context>
-You are starting a new session in a Trellis-managed project.
-Read and follow all instructions below carefully.
+你正在 Trellis 管理的项目中启动一个新会话。
+请仔细阅读并遵循以下所有说明。
 </session-context>
 
 """)
     output.write(FIRST_REPLY_NOTICE)
     output.write("\n\n")
 
-    # Legacy migration warning
+    # 旧版迁移警告
     legacy_warning = _check_legacy_spec(trellis_dir, is_mono, packages)
     if legacy_warning:
         output.write(f"<migration-warning>\n{legacy_warning}\n</migration-warning>\n\n")
@@ -703,32 +698,32 @@ Read and follow all instructions below carefully.
 
     output.write("<guidelines>\n")
     output.write(
-        "Project spec indexes are listed by path below. Each index contains a "
-        "**Pre-Development Checklist** listing the specific guideline files to "
-        "read before coding.\n\n"
-        "- If you're spawning an implement/check sub-agent, context is injected "
-        "or loaded by the sub-agent via `{task}/implement.jsonl` / `check.jsonl`. "
-        "You do NOT need to read these indexes yourself.\n"
-        "- For agent-capable platforms, the default is to dispatch "
-        "`trellis-implement` and `trellis-check` (so JSONL context is loaded by "
-        "the sub-agents) rather than editing code in the main session. "
-        "Honor a per-turn user override only if the user's current message "
-        "explicitly opts out (see <task-status> below for override phrases).\n"
-        "- Sub-agent self-exemption: if you are reading this as a `trellis-implement` "
-        "or `trellis-check` sub-agent, the \"dispatch trellis-implement / trellis-check\" "
-        "rule above does NOT apply to you — you are already the dispatched sub-agent. "
-        "Do NOT spawn another sub-agent of the same kind; implement / check directly.\n\n"
+        "项目 spec 索引按路径列在下方。每个索引包含一个 "
+        "**开发前检查清单（Pre-Development Checklist）**，列出编写代码前需要阅读的"
+        "具体指南文件。\n\n"
+        "- 如果你要派生 implement/check 子智能体，上下文会通过子智能体"
+        "的 `{task}/implement.jsonl` / `check.jsonl` 注入或加载。"
+        "你不需要自己读取这些索引。\n"
+        "- 对于支持智能体的平台，默认调度 "
+        "`trellis-implement` 和 `trellis-check`（让 JSONL 上下文由子智能体加载），"
+        "而不是在主线会话中编辑代码。"
+        "仅在用户当前消息明确退出时才遵从每轮用户覆盖"
+        "（覆盖短语见下方 <task-status>）。\n"
+        "- 子智能体自我豁免：如果你作为 `trellis-implement` "
+        "或 `trellis-check` 子智能体正在阅读此内容，上方的「调度 trellis-implement / trellis-check」"
+        "规则对你不适用 — 你已经是已调度的子智能体。"
+        "不要再次派生同类型的子智能体；直接实现/检查。\n\n"
     )
 
-    # guides/ is cross-package thinking — always include inline (small, broadly useful)
+    # guides/ 是跨 package 的思考指南 — 始终内联（内容少，广泛适用）
     guides_index = trellis_dir / "spec" / "guides" / "index.md"
     if guides_index.is_file():
-        output.write("## guides (inlined — cross-package thinking guides)\n")
+        output.write("## guides（已内联 — 跨 package 思考指南）\n")
         output.write(read_file(guides_index))
         output.write("\n\n")
 
-    # Other spec indexes — paths only (main agent reads on demand;
-    # sub-agents get their specific specs via jsonl injection)
+    # 其他 spec 索引 — 仅路径（主智能体按需读取；
+    # 子智能体通过 jsonl 注入获取其特定 spec）
     paths: list[str] = []
     spec_dir = trellis_dir / "spec"
     if spec_dir.is_dir():
@@ -736,15 +731,15 @@ Read and follow all instructions below carefully.
             if not sub.is_dir() or sub.name.startswith("."):
                 continue
             if sub.name == "guides":
-                continue  # already inlined above
+                continue  # 上面已内联
 
             index_file = sub / "index.md"
             if index_file.is_file():
-                # Flat spec dir (single-repo layer like spec/backend/)
+                # 扁平 spec 目录（单仓库层级，如 spec/backend/）
                 paths.append(f".trellis/spec/{sub.name}/index.md")
             else:
-                # Nested package dirs (monorepo: spec/<pkg>/<layer>/index.md)
-                # Apply scope filter
+                # 嵌套 package 目录（monorepo: spec/<pkg>/<layer>/index.md）
+                # 应用作用域过滤
                 if allowed_pkgs is not None and sub.name not in allowed_pkgs:
                     continue
                 for nested in sorted(sub.iterdir()):
@@ -757,39 +752,39 @@ Read and follow all instructions below carefully.
                         )
 
     if paths:
-        output.write("## Available spec indexes (read on demand)\n")
+        output.write("## 可用的 spec 索引（按需读取）\n")
         for p in paths:
             output.write(f"- {p}\n")
         output.write("\n")
 
     output.write(
-        "Discover more via: "
+        "发现更多："
         "`py -3 ./.trellis/scripts/get_context.py --mode packages`\n"
     )
     output.write("</guidelines>\n\n")
 
-    # Check task status and inject structured tag
+    # 检查任务状态并注入结构化标签
     task_status = _get_task_status(trellis_dir, hook_input)
     output.write(f"<task-status>\n{task_status}\n</task-status>\n\n")
 
     output.write("""<ready>
-Context loaded. Workflow index, project state, and guidelines are already injected above — do NOT re-read them.
-When the user sends the first message, follow <task-status> and the workflow guide.
-If a task is READY, execute its Next required action without asking whether to continue.
+上下文已加载。工作流索引、项目状态和指南已在上方注入 — 不要重新读取。
+当用户发送首条消息时，遵循 <task-status> 和工作流指南。
+如果任务处于 READY 状态，无需询问是否继续，直接执行其 Next required action。
 </ready>""")
 
     context_text = output.getvalue()
     result = {
-        # Claude Code / Qoder / CodeBuddy / Droid / Gemini / Copilot format
+        # Claude Code / Qoder / CodeBuddy / Droid / Gemini / Copilot 格式
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context_text,
         },
-        # Cursor sessionStart format (top-level snake_case per Cursor docs)
+        # Cursor sessionStart 格式（顶层 snake_case，遵循 Cursor 文档）
         "additional_context": context_text,
     }
 
-    # Output JSON - stdout is already configured for UTF-8
+    # 输出 JSON — stdout 已配置为 UTF-8
     print(json.dumps(result, ensure_ascii=False), flush=True)
 
 

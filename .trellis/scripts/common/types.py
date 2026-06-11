@@ -1,10 +1,10 @@
 """
-Core type definitions for Trellis task data.
+Trellis 任务数据的核心类型定义。
 
-Provides:
-    TaskData     — TypedDict for task.json shape (read-path type hints only)
-    TaskInfo     — Frozen dataclass for loaded task (the public API type)
-    AgentRecord  — TypedDict for registry.json agent entries
+提供:
+    TaskData     — task.json 结构的 TypedDict（仅用于读取路径的类型提示）
+    TaskInfo     — 已加载任务的冻结数据类（公共 API 类型）
+    AgentRecord  — registry.json 中 agent 条目的 TypedDict
 """
 
 from __future__ import annotations
@@ -15,14 +15,14 @@ from typing import TypedDict
 
 
 # =============================================================================
-# task.json shape (TypedDict — used only for read-path type hints)
+# task.json 结构（TypedDict — 仅用于读取路径的类型提示）
 # =============================================================================
 
 class TaskData(TypedDict, total=False):
-    """Shape of task.json on disk.
+    """task.json 在磁盘上的结构。
 
-    Used only for type annotations when reading task.json.
-    Writes must use the original dict to avoid losing unknown fields.
+    仅用于读取 task.json 时的类型注解。
+    写入时必须使用原始 dict 以避免丢失未知字段。
     """
 
     id: str
@@ -52,16 +52,15 @@ class TaskData(TypedDict, total=False):
 
 
 # =============================================================================
-# Loaded task object (frozen dataclass — the public API type)
+# 已加载任务对象（冻结数据类 — 公共 API 类型）
 # =============================================================================
 
 @dataclass(frozen=True)
 class TaskInfo:
-    """Immutable view of a loaded task.
+    """已加载任务的不可变视图。
 
-    Created by load_task() / iter_active_tasks().
-    Contains the commonly accessed fields; the original dict
-    is preserved in `raw` for write-back and uncommon field access.
+    由 load_task() / iter_active_tasks() 创建。
+    包含常用字段；原始 dict 保存在 `raw` 中，用于写回和访问非常用字段。
     """
 
     dir_name: str
@@ -73,11 +72,11 @@ class TaskInfo:
     children: tuple[str, ...]
     parent: str | None
     package: str | None
-    raw: dict  # original dict — use for writes and uncommon fields
+    raw: dict  # 原始 dict — 用于写入和访问非常用字段
 
     @property
     def name(self) -> str:
-        """Task name (id or name field)."""
+        """任务名称（id 或 name 字段）。"""
         return self.raw.get("name") or self.raw.get("id") or self.dir_name
 
     @property
@@ -94,11 +93,11 @@ class TaskInfo:
 
 
 # =============================================================================
-# registry.json agent entry
+# registry.json agent 条目
 # =============================================================================
 
 class AgentRecord(TypedDict, total=False):
-    """Shape of an agent entry in registry.json."""
+    """registry.json 中 agent 条目的结构。"""
 
     id: str
     pid: int

@@ -1,26 +1,26 @@
-# Agents
+# 智能体
 
-Trellis agent files define specialized roles. Common Trellis agents in a user project are:
+Trellis 智能体（agent）文件定义专门的角色。用户项目中常见的 Trellis 智能体有：
 
 - `trellis-research`
 - `trellis-implement`
 - `trellis-check`
 
-File locations and formats differ by platform, but responsibility boundaries should stay consistent.
+文件位置和格式因平台而异，但职责边界应保持一致。
 
-## Agent Responsibilities
+## 智能体职责
 
-| Agent | Responsibility |
+| 智能体 | 职责 |
 | --- | --- |
-| `trellis-research` | Investigate the question and write findings into the current task's `research/`. |
-| `trellis-implement` | Implement against `prd.md`, `info.md`, `implement.jsonl`, and related spec/research. |
-| `trellis-check` | Review changes, fix discovered issues, and run necessary checks. |
+| `trellis-research` | 研究问题并将结论写入当前任务的 `research/`。 |
+| `trellis-implement` | 对照 `prd.md`、`info.md`、`implement.jsonl` 及相关规范/研究进行实现。 |
+| `trellis-check` | 审查变更，修复发现的问题，并运行必要的检查。 |
 
-Agent files should not become generic chat prompts. They should define input sources, write boundaries, whether code may be changed, and how results are reported.
+智能体文件不应成为通用聊天提示。它们应定义输入来源、写入边界、是否可以修改代码以及如何报告结果。
 
-## Common Paths
+## 常见路径
 
-| Platform | Agent path |
+| 平台 | 智能体路径 |
 | --- | --- |
 | Claude Code | `.claude/agents/trellis-*.md` |
 | Cursor | `.cursor/agents/trellis-*.md` |
@@ -33,47 +33,47 @@ Agent files should not become generic chat prompts. They should define input sou
 | Factory Droid | `.factory/droids/trellis-*.md` |
 | Pi Agent | `.pi/agents/trellis-*.md` |
 
-GitHub Copilot agent/prompt support is provided by a combination of directories such as `.github/agents/`, `.github/prompts/`, and `.github/skills/`; inspect the files actually generated in the user project.
+GitHub Copilot 的 agent/prompt 支持由 `.github/agents/`、`.github/prompts/` 和 `.github/skills/` 等目录组合提供；检查用户项目中实际生成的文件。
 
-Main-session workflow platforms such as Kilo, Antigravity, and Windsurf may not have Trellis sub-agent files. They usually rely on workflows/skills to guide the main session.
+Kilo、Antigravity 和 Windsurf 等主会话工作流平台可能没有 Trellis 子智能体文件。它们通常依赖工作流/技能来引导主会话。
 
-## Two Context Loading Modes
+## 两种上下文加载模式
 
 ### hook push
 
-The platform hook injects task context before the agent starts. The agent file itself can focus more on responsibilities and boundaries.
+平台钩子在智能体启动前注入任务上下文。智能体文件本身可以更专注于职责和边界。
 
-Common on platforms that support agent hooks.
+常见于支持智能体钩子的平台。
 
 ### agent pull
 
-The agent file instructs the agent to read after startup:
+智能体文件指示智能体在启动后读取：
 
 - `py -3 ./.trellis/scripts/task.py current --source`
-- current task `prd.md`
+- 当前任务 `prd.md`
 - `info.md`
-- `implement.jsonl` or `check.jsonl`
-- spec/research files referenced by JSONL
+- `implement.jsonl` 或 `check.jsonl`
+- JSONL 引用的规范/研究文件
 
-This mode fits platforms whose hooks cannot reliably rewrite sub-agent prompts.
+此模式适用于钩子无法可靠重写子智能体提示的平台。
 
-## Local Change Scenarios
+## 本地变更场景
 
-| User need | Edit location |
+| 用户需求 | 编辑位置 |
 | --- | --- |
-| Implement agent must follow extra restrictions | The platform's `trellis-implement` agent file. |
-| Check agent must run project-specific commands | `trellis-check` agent file, and `.trellis/spec/` if needed. |
-| Research agent must output a fixed format | `trellis-research` agent file. |
-| Agent cannot read task context | Agent prelude or `inject-subagent-context` hook. |
-| Add a project-specific agent | Platform agent directory + related workflow/command/skill entry point. |
+| 实现智能体必须遵守额外限制 | 平台的 `trellis-implement` 智能体文件。 |
+| 检查智能体必须运行项目专属命令 | `trellis-check` 智能体文件，必要时也包括 `.trellis/spec/`。 |
+| 研究智能体必须输出固定格式 | `trellis-research` 智能体文件。 |
+| 智能体无法读取任务上下文 | 智能体序言或 `inject-subagent-context` 钩子。 |
+| 添加项目专属智能体 | 平台智能体目录 + 相关工作流/命令/技能入口点。 |
 
-## Modification Principles
+## 修改原则
 
-1. **Keep responsibilities single-purpose**. Do not mix research, implement, and check responsibilities into one agent.
-2. **Specify the read order**. Agents must know to start from the active task and then find the PRD and JSONL.
-3. **Specify write boundaries**. Research usually only writes `research/`; implement can write code; check can fix issues.
-4. **Keep semantics synchronized in multi-platform projects**. If the user configured Claude, Codex, and Cursor together, decide whether changes to one platform's agent also need to be applied to others.
+1. **保持职责单一**。不要将研究、实现和检查的职责混合到一个智能体中。
+2. **指定读取顺序**。智能体必须知道从活动任务开始，然后找到 PRD 和 JSONL。
+3. **指定写入边界**。研究通常只写入 `research/`；实现可以写入代码；检查可以修复问题。
+4. **在多平台项目中保持语义同步**。如果用户同时配置了 Claude、Codex 和 Cursor，判断对一个平台智能体的更改是否需要同步应用到其他平台。
 
-## Do Not Default To Editing Upstream Templates
+## 不要默认编辑上游模板
 
-Local AI should default to modifying platform agent files inside the user project. Discuss upstream template source only when the user explicitly wants to contribute the change back to Trellis.
+本地 AI 应默认修改用户项目内的平台智能体文件。仅在用户明确想要将变更贡献回 Trellis 上游时才讨论上游模板源代码。

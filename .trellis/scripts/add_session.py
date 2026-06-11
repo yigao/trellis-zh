@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Add a new session to journal file and update index.md.
+向日志文件添加新会话并更新 index.md。
 
-Usage:
-    py -3 add_session.py --title "Title" --commit "hash" --summary "Summary" [--package cli]
-    py -3 add_session.py --title "Title" --branch "feat/my-branch"
+用法：
+    py -3 add_session.py --title "标题" --commit "哈希" --summary "摘要" [--package cli]
+    py -3 add_session.py --title "标题" --branch "feat/my-branch"
 
-    # Pipe detailed content via stdin (use --stdin to opt in):
-    cat << 'EOF' | py -3 add_session.py --stdin --title "Title" --summary "Summary"
-    <session content here>
+    # 通过 stdin 管道传入详细内容（使用 --stdin 显式启用）：
+    cat << 'EOF' | py -3 add_session.py --stdin --title "标题" --summary "摘要"
+    <会话内容在此>
     EOF
 
-Branch resolution order:
-    1. --branch CLI arg (explicit)
-    2. task.json branch field (from active task)
-    3. git branch --show-current (auto-detect)
-    4. None (omitted gracefully)
+分支解析顺序：
+    1. --branch 命令行参数（显式指定）
+    2. task.json 的 branch 字段（来自活动任务）
+    3. git branch --show-current（自动检测）
+    4. None（优雅地省略）
 """
 
 from __future__ import annotations
@@ -54,14 +54,14 @@ from common.config import (
 
 
 # =============================================================================
-# Helper Functions
+# 辅助函数
 # =============================================================================
 
 def get_latest_journal_info(dev_dir: Path) -> tuple[Path | None, int, int]:
-    """Get latest journal file info.
+    """获取最新日志文件信息。
 
-    Returns:
-        Tuple of (file_path, file_number, line_count).
+    返回：
+        元组 (文件路径, 文件编号, 行数)。
     """
     latest_file: Path | None = None
     latest_num = -1
@@ -85,7 +85,7 @@ def get_latest_journal_info(dev_dir: Path) -> tuple[Path | None, int, int]:
 
 
 def get_current_session(index_file: Path) -> int:
-    """Get current session number from index.md."""
+    """从 index.md 获取当前会话编号。"""
     if not index_file.is_file():
         return 0
 
@@ -99,13 +99,13 @@ def get_current_session(index_file: Path) -> int:
 
 
 def _extract_journal_num(filename: str) -> int:
-    """Extract journal number from filename for sorting."""
+    """从文件名中提取日志编号用于排序。"""
     match = re.search(r"(\d+)", filename)
     return int(match.group(1)) if match else 0
 
 
 def count_journal_files(dev_dir: Path, active_num: int) -> str:
-    """Count journal files and return table rows."""
+    """统计日志文件并返回表格行。"""
     active_file = f"{FILE_JOURNAL_PREFIX}{active_num}.md"
     result_lines = []
 
@@ -118,7 +118,7 @@ def count_journal_files(dev_dir: Path, active_num: int) -> str:
     for f in files:
         filename = f.name
         lines = len(f.read_text(encoding="utf-8").splitlines())
-        status = "Active" if filename == active_file else "Archived"
+        status = "活动" if filename == active_file else "已归档"
         result_lines.append(f"| `{filename}` | ~{lines} | {status} |")
 
     return "\n".join(result_lines)
@@ -127,14 +127,14 @@ def count_journal_files(dev_dir: Path, active_num: int) -> str:
 def create_new_journal_file(
     dev_dir: Path, num: int, developer: str, today: str, max_lines: int = 2000,
 ) -> Path:
-    """Create a new journal file."""
+    """创建新的日志文件。"""
     prev_num = num - 1
     new_file = dev_dir / f"{FILE_JOURNAL_PREFIX}{num}.md"
 
-    content = f"""# Journal - {developer} (Part {num})
+    content = f"""# 日志 - {developer}（第 {num} 部分）
 
-> Continuation from `{FILE_JOURNAL_PREFIX}{prev_num}.md` (archived at ~{max_lines} lines)
-> Started: {today}
+> 接续自 `{FILE_JOURNAL_PREFIX}{prev_num}.md`（在约 {max_lines} 行时归档）
+> 开始日期：{today}
 
 ---
 
@@ -153,49 +153,49 @@ def generate_session_content(
     package: str | None = None,
     branch: str | None = None,
 ) -> str:
-    """Generate session content."""
+    """生成会话内容。"""
     if commit and commit != "-":
-        commit_table = """| Hash | Message |
-|------|---------|"""
+        commit_table = """| 哈希 | 消息 |
+|------|------|"""
         for c in commit.split(","):
             c = c.strip()
-            commit_table += f"\n| `{c}` | (see git log) |"
+            commit_table += f"\n| `{c}` | (参见 git log) |"
     else:
-        commit_table = "(No commits - planning session)"
+        commit_table = "（无提交 - 规划会话）"
 
-    package_line = f"\n**Package**: {package}" if package else ""
-    branch_line = f"\n**Branch**: `{branch}`" if branch else ""
+    package_line = f"\n**软件包**：{package}" if package else ""
+    branch_line = f"\n**分支**：`{branch}`" if branch else ""
 
     return f"""
 
-## Session {session_num}: {title}
+## 会话 {session_num}：{title}
 
-**Date**: {today}
-**Task**: {title}{package_line}{branch_line}
+**日期**：{today}
+**任务**：{title}{package_line}{branch_line}
 
-### Summary
+### 摘要
 
 {summary}
 
-### Main Changes
+### 主要变更
 
 {extra_content}
 
-### Git Commits
+### Git 提交
 
 {commit_table}
 
-### Testing
+### 测试
 
-- [OK] (Add test results)
+- [OK]（添加测试结果）
 
-### Status
+### 状态
 
-[OK] **Completed**
+[OK] **已完成**
 
-### Next Steps
+### 后续步骤
 
-- None - task complete
+- 无 - 任务已完成
 """
 
 
@@ -209,30 +209,30 @@ def update_index(
     today: str,
     branch: str | None = None,
 ) -> bool:
-    """Update index.md with new session info."""
-    # Format commit for display
+    """使用新会话信息更新 index.md。"""
+    # 格式化提交信息用于展示
     commit_display = "-"
     if commit and commit != "-":
         commit_display = re.sub(r"([a-f0-9]{7,})", r"`\1`", commit.replace(",", ", "))
 
-    # Get file number from active_file name
+    # 从 active_file 名称中获取文件编号
     match = re.search(r"(\d+)", active_file)
     active_num = int(match.group(1)) if match else 0
     files_table = count_journal_files(dev_dir, active_num)
 
-    print(f"Updating index.md for session {new_session}...")
-    print(f"  Title: {title}")
-    print(f"  Commit: {commit_display}")
-    print(f"  Active File: {active_file}")
+    print(f"正在为会话 {new_session} 更新 index.md...")
+    print(f"  标题：{title}")
+    print(f"  提交：{commit_display}")
+    print(f"  活动文件：{active_file}")
     print()
 
     content = index_file.read_text(encoding="utf-8")
 
     if "@@@auto:current-status" not in content:
-        print("Error: Markers not found in index.md. Please ensure markers exist.", file=sys.stderr)
+        print("错误：在 index.md 中未找到标记。请确保标记存在。", file=sys.stderr)
         return False
 
-    # Process sections
+    # 处理各个区块
     lines = content.splitlines()
     new_lines = []
 
@@ -245,9 +245,9 @@ def update_index(
         if "@@@auto:current-status" in line:
             new_lines.append(line)
             in_current_status = True
-            new_lines.append(f"- **Active File**: `{active_file}`")
-            new_lines.append(f"- **Total Sessions**: {new_session}")
-            new_lines.append(f"- **Last Active**: {today}")
+            new_lines.append(f"- **活动文件**：`{active_file}`")
+            new_lines.append(f"- **会话总数**：{new_session}")
+            new_lines.append(f"- **最近活动**：{today}")
             continue
 
         if "@@@/auto:current-status" in line:
@@ -258,8 +258,8 @@ def update_index(
         if "@@@auto:active-documents" in line:
             new_lines.append(line)
             in_active_documents = True
-            new_lines.append("| File | Lines | Status |")
-            new_lines.append("|------|-------|--------|")
+            new_lines.append("| 文件 | 行数 | 状态 |")
+            new_lines.append("|------|------|------|")
             new_lines.append(files_table)
             continue
 
@@ -286,21 +286,21 @@ def update_index(
             continue
 
         if in_session_history:
-            # Migrate old 4/6-column headers to 5-column Branch-only history.
+            # 将旧的 4/6 列表头迁移到仅包含分支的 5 列历史记录。
             if re.match(
                 r"^\|\s*#\s*\|\s*Date\s*\|\s*Title\s*\|\s*Commits\s*\|\s*Branch\s*\|\s*Base Branch\s*\|\s*$",
                 line,
             ):
-                new_lines.append("| # | Date | Title | Commits | Branch |")
+                new_lines.append("| # | 日期 | 标题 | 提交 | 分支 |")
                 continue
             if re.match(r"^\|\s*#\s*\|\s*Date\s*\|\s*Title\s*\|\s*Commits\s*\|\s*Branch\s*\|\s*$", line):
-                new_lines.append("| # | Date | Title | Commits | Branch |")
+                new_lines.append("| # | 日期 | 标题 | 提交 | 分支 |")
                 continue
             if re.match(r"^\|\s*#\s*\|\s*Date\s*\|\s*Title\s*\|\s*Commits\s*\|\s*$", line):
-                new_lines.append("| # | Date | Title | Commits | Branch |")
+                new_lines.append("| # | 日期 | 标题 | 提交 | 分支 |")
                 continue
             if re.match(r"^\|[-| ]+\|\s*$", line) and not header_written:
-                new_lines.append("|---|------|-------|---------|--------|")
+                new_lines.append("|---|------|------|------|------|")
                 new_lines.append(f"| {new_session} | {today} | {title} | {commit_display} | `{branch or '-'}` |")
                 header_written = True
                 continue
@@ -310,29 +310,29 @@ def update_index(
         new_lines.append(line)
 
     index_file.write_text("\n".join(new_lines), encoding="utf-8")
-    print("[OK] Updated index.md successfully!")
+    print("[OK] index.md 更新成功！")
     return True
 
 
 # =============================================================================
-# Main Function
+# 主函数
 # =============================================================================
 
 def _auto_commit_workspace(repo_root: Path) -> None:
-    """Stage Trellis-owned workspace + task paths and commit.
+    """暂存 Trellis 所属的工作区 + 任务路径并提交。
 
-    Path scope is restricted to specific products (journal files, index.md,
-    active task dirs, the archive subtree). We never `git add` the whole
-    `.trellis/` tree, and if `.gitignore` blocks the specific paths we
-    warn + skip — never retry with ``-f``.
+    路径范围限定为特定产物（日志文件、index.md、
+    活动任务目录、归档子树）。我们绝不会对整个
+    `.trellis/` 目录树执行 `git add`，如果 `.gitignore` 阻止了特定路径，
+    我们会警告并跳过 — 绝不会使用 ``-f`` 重试。
 
-    Honors ``session_auto_commit`` in ``.trellis/config.yaml``: when set to
-    ``false``, this function returns immediately without touching git
-    (journal/index files are still written to disk by the caller).
+    遵循 ``.trellis/config.yaml`` 中的 ``session_auto_commit`` 设置：当设置为
+    ``false`` 时，此函数立即返回而不操作 git
+    （调用方仍然会将日志/index 文件写入磁盘）。
     """
     if not get_session_auto_commit(repo_root):
         print(
-            "[OK] session_auto_commit: false — skipping git stage/commit.",
+            "[OK] session_auto_commit: false — 跳过 git 暂存/提交。",
             file=sys.stderr,
         )
         return
@@ -340,7 +340,7 @@ def _auto_commit_workspace(repo_root: Path) -> None:
     commit_msg = get_session_commit_message(repo_root)
     paths = safe_trellis_paths_to_add(repo_root)
     if not paths:
-        print("[OK] No workspace changes to commit.", file=sys.stderr)
+        print("[OK] 没有工作区变更需要提交。", file=sys.stderr)
         return
 
     success, _, err = safe_git_add(paths, repo_root)
@@ -349,25 +349,25 @@ def _auto_commit_workspace(repo_root: Path) -> None:
             print_gitignore_warning(paths)
         else:
             print(
-                f"[WARN] git add failed: {err.strip() if err else 'unknown error'}",
+                f"[警告] git add 失败：{err.strip() if err else '未知错误'}",
                 file=sys.stderr,
             )
         return
 
-    # Check if there are staged changes for the paths we just staged.
+    # 检查我们刚暂存的路径是否有暂存变更。
     rc, _, _ = run_git(
         ["diff", "--cached", "--quiet", "--", *paths], cwd=repo_root
     )
     if rc == 0:
-        print("[OK] No workspace changes to commit.", file=sys.stderr)
+        print("[OK] 没有工作区变更需要提交。", file=sys.stderr)
         return
 
     rc, _, commit_err = run_git(["commit", "-m", commit_msg], cwd=repo_root)
     if rc == 0:
-        print(f"[OK] Auto-committed: {commit_msg}", file=sys.stderr)
+        print(f"[OK] 自动提交：{commit_msg}", file=sys.stderr)
     else:
         print(
-            f"[WARN] Auto-commit failed: {commit_err.strip()}",
+            f"[警告] 自动提交失败：{commit_err.strip()}",
             file=sys.stderr,
         )
 
@@ -375,24 +375,24 @@ def _auto_commit_workspace(repo_root: Path) -> None:
 def add_session(
     title: str,
     commit: str = "-",
-    summary: str = "(Add summary)",
-    extra_content: str = "(Add details)",
+    summary: str = "（添加摘要）",
+    extra_content: str = "（添加详情）",
     auto_commit: bool = True,
     package: str | None = None,
     branch: str | None = None,
 ) -> int:
-    """Add a new session."""
+    """添加新会话。"""
     repo_root = get_repo_root()
     ensure_developer(repo_root)
 
     developer = get_developer(repo_root)
     if not developer:
-        print("Error: Developer not initialized", file=sys.stderr)
+        print("错误：开发者未初始化", file=sys.stderr)
         return 1
 
     dev_dir = get_workspace_dir(repo_root)
     if not dev_dir:
-        print("Error: Workspace directory not found", file=sys.stderr)
+        print("错误：未找到工作区目录", file=sys.stderr)
         return 1
 
     max_lines = get_max_journal_lines(repo_root)
@@ -411,17 +411,17 @@ def add_session(
     content_lines = len(session_content.splitlines())
 
     print("========================================", file=sys.stderr)
-    print("ADD SESSION", file=sys.stderr)
+    print("添加会话", file=sys.stderr)
     print("========================================", file=sys.stderr)
     print("", file=sys.stderr)
-    print(f"Session: {new_session}", file=sys.stderr)
-    print(f"Title: {title}", file=sys.stderr)
-    print(f"Commit: {commit}", file=sys.stderr)
+    print(f"会话：{new_session}", file=sys.stderr)
+    print(f"标题：{title}", file=sys.stderr)
+    print(f"提交：{commit}", file=sys.stderr)
     print("", file=sys.stderr)
-    print(f"Current journal file: {FILE_JOURNAL_PREFIX}{current_num}.md", file=sys.stderr)
-    print(f"Current lines: {current_lines}", file=sys.stderr)
-    print(f"New content lines: {content_lines}", file=sys.stderr)
-    print(f"Total after append: {current_lines + content_lines}", file=sys.stderr)
+    print(f"当前日志文件：{FILE_JOURNAL_PREFIX}{current_num}.md", file=sys.stderr)
+    print(f"当前行数：{current_lines}", file=sys.stderr)
+    print(f"新内容行数：{content_lines}", file=sys.stderr)
+    print(f"追加后总计：{current_lines + content_lines}", file=sys.stderr)
     print("", file=sys.stderr)
 
     target_file = journal_file
@@ -429,19 +429,19 @@ def add_session(
 
     if current_lines + content_lines > max_lines:
         target_num = current_num + 1
-        print(f"[!] Exceeds {max_lines} lines, creating {FILE_JOURNAL_PREFIX}{target_num}.md", file=sys.stderr)
+        print(f"[!] 超过 {max_lines} 行，正在创建 {FILE_JOURNAL_PREFIX}{target_num}.md", file=sys.stderr)
         target_file = create_new_journal_file(dev_dir, target_num, developer, today, max_lines)
-        print(f"Created: {target_file}", file=sys.stderr)
+        print(f"已创建：{target_file}", file=sys.stderr)
 
-    # Append session content
+    # 追加会话内容
     if target_file:
         with target_file.open("a", encoding="utf-8") as f:
             f.write(session_content)
-        print(f"[OK] Appended session to {target_file.name}", file=sys.stderr)
+        print(f"[OK] 会话已追加到 {target_file.name}", file=sys.stderr)
 
     print("", file=sys.stderr)
 
-    # Update index.md
+    # 更新 index.md
     active_file = f"{FILE_JOURNAL_PREFIX}{target_num}.md"
     if not update_index(
         index_file,
@@ -457,14 +457,14 @@ def add_session(
 
     print("", file=sys.stderr)
     print("========================================", file=sys.stderr)
-    print(f"[OK] Session {new_session} added successfully!", file=sys.stderr)
+    print(f"[OK] 会话 {new_session} 添加成功！", file=sys.stderr)
     print("========================================", file=sys.stderr)
     print("", file=sys.stderr)
-    print("Files updated:", file=sys.stderr)
-    print(f"  - {target_file.name if target_file else 'journal'}", file=sys.stderr)
+    print("已更新文件：", file=sys.stderr)
+    print(f"  - {target_file.name if target_file else '日志'}", file=sys.stderr)
     print("  - index.md", file=sys.stderr)
 
-    # Auto-commit workspace changes
+    # 自动提交工作区变更
     if auto_commit:
         print("", file=sys.stderr)
         _auto_commit_workspace(repo_root)
@@ -473,28 +473,28 @@ def add_session(
 
 
 # =============================================================================
-# Main Entry
+# 主入口
 # =============================================================================
 
 def main() -> int:
-    """CLI entry point."""
+    """命令行接口入口点。"""
     parser = argparse.ArgumentParser(
-        description="Add a new session to journal file and update index.md"
+        description="向日志文件添加新会话并更新 index.md"
     )
-    parser.add_argument("--title", required=True, help="Session title")
-    parser.add_argument("--commit", default="-", help="Comma-separated commit hashes")
-    parser.add_argument("--summary", default="(Add summary)", help="Brief summary")
-    parser.add_argument("--content-file", help="Path to file with detailed content")
-    parser.add_argument("--package", help="Package name tag (e.g., cli, docs-site)")
-    parser.add_argument("--branch", help="Branch name (auto-detected if omitted)")
+    parser.add_argument("--title", required=True, help="会话标题")
+    parser.add_argument("--commit", default="-", help="逗号分隔的提交哈希")
+    parser.add_argument("--summary", default="（添加摘要）", help="简要摘要")
+    parser.add_argument("--content-file", help="包含详细内容的文件路径")
+    parser.add_argument("--package", help="软件包名称标签（如 cli、docs-site）")
+    parser.add_argument("--branch", help="分支名称（如省略则自动检测）")
     parser.add_argument("--no-commit", action="store_true",
-                        help="Skip auto-commit of workspace changes")
+                        help="跳过工作区变更的自动提交")
     parser.add_argument("--stdin", action="store_true",
-                        help="Read extra content from stdin (explicit opt-in)")
+                        help="从 stdin 读取额外内容（需显式启用）")
 
     args = parser.parse_args()
 
-    extra_content = "(Add details)"
+    extra_content = "（添加详情）"
     if args.content_file:
         content_path = Path(args.content_file)
         if content_path.is_file():
@@ -502,28 +502,28 @@ def main() -> int:
     elif args.stdin:
         extra_content = sys.stdin.read()
 
-    # Load active task once — shared by package and branch resolution
+    # 加载一次活动任务 — 供软件包和分支解析共用
     repo_root = get_repo_root()
     current = get_current_task(repo_root)
     task_data = load_task(repo_root / current) if current else None
 
     package = args.package
     if package:
-        # CLI source: fail-fast in monorepo, ignore in single-repo
+        # 命令行指定：单仓库项目快速失败，单仓库忽略
         if not is_monorepo(repo_root):
-            print("Warning: --package ignored in single-repo project", file=sys.stderr)
+            print("警告：--package 在单仓库项目中被忽略", file=sys.stderr)
             package = None
         elif not validate_package(package, repo_root):
             packages = get_packages(repo_root)
-            available = ", ".join(sorted(packages.keys())) if packages else "(none)"
-            print(f"Error: unknown package '{package}'. Available: {available}", file=sys.stderr)
+            available = ", ".join(sorted(packages.keys())) if packages else "（无）"
+            print(f"错误：未知软件包 '{package}'。可用的软件包：{available}", file=sys.stderr)
             return 1
     else:
-        # Inferred: active task's task.json.package → default_package → None
+        # 推断：活动任务的 task.json.package → default_package → None
         task_package = task_data.package if task_data else None
         package = resolve_package(task_package, repo_root)
 
-    # Resolve branch: CLI → task.json → git auto-detect → None
+    # 解析分支：命令行 → task.json → git 自动检测 → None
     branch = args.branch
 
     if not branch:

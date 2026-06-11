@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Session context generation (default + record modes).
+会话上下文生成（默认模式 + 记录模式）。
 
-Provides:
-    get_context_json          - JSON output for default mode
-    get_context_text          - Text output for default mode
-    get_context_record_json   - JSON for record mode
-    get_context_text_record   - Text for record mode
-    output_json               - Print JSON
-    output_text               - Print text
+提供：
+    get_context_json          - 默认模式的 JSON 输出
+    get_context_text          - 默认模式的文本输出
+    get_context_record_json   - 记录模式的 JSON
+    get_context_text_record   - 记录模式的文本
+    output_json               - 打印 JSON
+    output_text               - 打印文本
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ from .paths import (
 
 
 # =============================================================================
-# Helpers
+# 辅助函数
 # =============================================================================
 
 _PACKAGE_NAME = "@mindfoldhq/trellis"
@@ -67,13 +67,13 @@ _POLYREPO_SCAN_MAX_DEPTH = 2
 
 
 def _is_git_worktree(path: Path) -> bool:
-    """Return True when path is inside a Git worktree."""
+    """当路径位于 Git worktree 内部时返回 True。"""
     rc, out, _ = run_git(["rev-parse", "--is-inside-work-tree"], cwd=path)
     return rc == 0 and out.strip().lower() == "true"
 
 
 def _parse_recent_commits(log_output: str) -> list[dict]:
-    """Parse `git log --oneline` output into structured commit entries."""
+    """将 `git log --oneline` 输出解析为结构化的提交条目。"""
     commits = []
     for line in log_output.splitlines():
         if not line.strip():
@@ -87,7 +87,7 @@ def _parse_recent_commits(log_output: str) -> list[dict]:
 
 
 def _collect_git_repo_info(name: str, rel_path: str, repo_dir: Path) -> dict | None:
-    """Collect Git status for one known repository directory."""
+    """收集一个已知仓库目录的 Git 状态。"""
     if not (repo_dir / ".git").exists():
         return None
 
@@ -110,7 +110,7 @@ def _collect_git_repo_info(name: str, rel_path: str, repo_dir: Path) -> dict | N
 
 
 def _collect_root_git_info(repo_root: Path) -> dict:
-    """Collect root Git info without pretending a non-Git root is clean."""
+    """收集根目录的 Git 信息，不将非 Git 根目录伪装为干净状态。"""
     if not _is_git_worktree(repo_root):
         return {
             "isRepo": False,
@@ -141,7 +141,7 @@ def _collect_root_git_info(repo_root: Path) -> dict:
 
 
 def _discover_child_git_repos(repo_root: Path) -> list[tuple[str, str]]:
-    """Discover child Git repositories using the init-time polyrepo heuristic."""
+    """使用初始化时的多仓库启发式方法发现子 Git 仓库。"""
     found: list[str] = []
 
     def is_candidate_dir(path: Path) -> bool:
@@ -179,16 +179,16 @@ def _collect_package_git_info(
     repo_root: Path,
     discover_unconfigured: bool = False,
 ) -> list[dict]:
-    """Collect Git status for independent package repositories.
+    """收集独立软件包仓库的 Git 状态。
 
-    Packages marked with ``git: true`` in config.yaml are authoritative.
-    When the Trellis root is not a Git repo and no configured package repos are
-    available, optionally fall back to the bounded polyrepo child scan.
+    config.yaml 中标记为 ``git: true`` 的软件包是权威来源。
+    当 Trellis 根目录不是 Git 仓库且没有配置的软件包仓库可用时，
+    可选地回退到有界多仓库子目录扫描。
 
     Returns:
-        List of dicts with keys: name, path, branch, isClean,
-        uncommittedChanges, recentCommits.
-        Empty list if no git-repo packages are configured.
+        字典列表，键为：name、path、branch、isClean、
+        uncommittedChanges、recentCommits。
+        如果没有配置 git-repo 软件包则返回空列表。
     """
     git_pkgs = get_git_packages(repo_root)
     result = []
@@ -210,57 +210,57 @@ def _collect_package_git_info(
 
 
 def _append_root_git_context(lines: list[str], root_git_info: dict) -> None:
-    """Append root Git status without misleading non-Git roots."""
-    lines.append("## GIT STATUS")
+    """追加根目录 Git 状态，不误导非 Git 根目录。"""
+    lines.append("## GIT 状态")
     if not root_git_info["isRepo"]:
-        lines.append("Root is not a Git repository.")
-        lines.append("Run Git commands from the package repository paths listed below.")
+        lines.append("根目录不是 Git 仓库。")
+        lines.append("请从下方列出的软件包仓库路径运行 Git 命令。")
     else:
-        lines.append(f"Branch: {root_git_info['branch']}")
+        lines.append(f"分支：{root_git_info['branch']}")
         if root_git_info["isClean"]:
-            lines.append("Working directory: Clean")
+            lines.append("工作目录：干净")
         else:
             lines.append(
-                f"Working directory: {root_git_info['uncommittedChanges']} "
-                "uncommitted change(s)"
+                f"工作目录：{root_git_info['uncommittedChanges']} "
+                "个未提交的更改"
             )
             lines.append("")
-            lines.append("Changes:")
+            lines.append("更改：")
             for line in root_git_info.get("statusShort", [])[:10]:
                 lines.append(line)
     lines.append("")
 
-    lines.append("## RECENT COMMITS")
+    lines.append("## 最近提交")
     if not root_git_info["isRepo"]:
         lines.append(
-            "Root has no Git commit history because it is not a Git repository."
+            "根目录没有 Git 提交历史，因为它不是 Git 仓库。"
         )
     elif root_git_info["recentCommits"]:
         for commit in root_git_info["recentCommits"]:
             lines.append(f"{commit['hash']} {commit['message']}")
     else:
-        lines.append("(no commits)")
+        lines.append("（无提交记录）")
     lines.append("")
 
 
 def _append_package_git_context(lines: list[str], package_git_info: list[dict]) -> None:
-    """Append Git status and recent commits for package repositories."""
+    """追加软件包仓库的 Git 状态和最近提交。"""
     for pkg in package_git_info:
-        lines.append(f"## GIT STATUS ({pkg['name']}: {pkg['path']})")
-        lines.append(f"Branch: {pkg['branch']}")
+        lines.append(f"## GIT 状态（{pkg['name']}: {pkg['path']}）")
+        lines.append(f"分支：{pkg['branch']}")
         if pkg["isClean"]:
-            lines.append("Working directory: Clean")
+            lines.append("工作目录：干净")
         else:
             lines.append(
-                f"Working directory: {pkg['uncommittedChanges']} uncommitted change(s)"
+                f"工作目录：{pkg['uncommittedChanges']} 个未提交的更改"
             )
         lines.append("")
-        lines.append(f"## RECENT COMMITS ({pkg['name']}: {pkg['path']})")
+        lines.append(f"## 最近提交（{pkg['name']}: {pkg['path']}）")
         if pkg["recentCommits"]:
             for commit in pkg["recentCommits"]:
                 lines.append(f"{commit['hash']} {commit['message']}")
         else:
-            lines.append("(no commits)")
+            lines.append("（无提交记录）")
         lines.append("")
 
 
@@ -411,23 +411,23 @@ def _get_update_hint(repo_root: Path) -> str | None:
         return None
 
     return (
-        f"Trellis update available: {current_version} -> {latest_version}, "
-        f"run npm install -g {_PACKAGE_NAME}@latest"
+        f"Trellis 更新可用：{current_version} -> {latest_version}，"
+        f"运行 npm install -g {_PACKAGE_NAME}@latest"
     )
 
 
 # =============================================================================
-# JSON Output
+# JSON 输出
 # =============================================================================
 
 def get_context_json(repo_root: Path | None = None) -> dict:
-    """Get context as a dictionary.
+    """以字典形式获取上下文。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Context dictionary.
+        上下文字典。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -446,7 +446,7 @@ def get_context_json(repo_root: Path | None = None) -> dict:
 
     root_git_info = _collect_root_git_info(repo_root)
 
-    # Tasks
+    # 任务
     tasks = [
         {
             "dir": t.dir_name,
@@ -458,7 +458,7 @@ def get_context_json(repo_root: Path | None = None) -> dict:
         for t in iter_active_tasks(tasks_dir)
     ]
 
-    # Package git repos (independent sub-repositories)
+    # 软件包 Git 仓库（独立子仓库）
     pkg_git_info = _collect_package_git_info(
         repo_root,
         discover_unconfigured=not root_git_info["isRepo"],
@@ -491,54 +491,54 @@ def get_context_json(repo_root: Path | None = None) -> dict:
 
 
 def output_json(repo_root: Path | None = None) -> None:
-    """Output context in JSON format.
+    """以 JSON 格式输出上下文。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
     """
     context = get_context_json(repo_root)
     print(json.dumps(context, indent=2, ensure_ascii=False))
 
 
 # =============================================================================
-# Text Output
+# 文本输出
 # =============================================================================
 
 def get_context_text(repo_root: Path | None = None) -> str:
-    """Get context as formatted text.
+    """以格式化文本形式获取上下文。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
 
     Returns:
-        Formatted text output.
+        格式化文本输出。
     """
     if repo_root is None:
         repo_root = get_repo_root()
 
     lines = []
     lines.append("========================================")
-    lines.append("SESSION CONTEXT")
+    lines.append("会话上下文")
     lines.append("========================================")
     lines.append("")
 
     developer = get_developer(repo_root)
 
-    # Developer section
-    lines.append("## DEVELOPER")
+    # 开发者部分
+    lines.append("## 开发者")
     if not developer:
         lines.append(
-            f"ERROR: Not initialized. Run: py -3 ./{DIR_WORKFLOW}/{DIR_SCRIPTS}/init_developer.py <name>"
+            f"错误：未初始化。运行：py -3 ./{DIR_WORKFLOW}/{DIR_SCRIPTS}/init_developer.py <名称>"
         )
         return "\n".join(lines)
 
-    lines.append(f"Name: {developer}")
+    lines.append(f"名称：{developer}")
     lines.append("")
 
     root_git_info = _collect_root_git_info(repo_root)
     _append_root_git_context(lines, root_git_info)
 
-    # Package git repos — independent sub-repositories
+    # 软件包 Git 仓库 — 独立子仓库
     _append_package_git_context(
         lines,
         _collect_package_git_info(
@@ -547,40 +547,40 @@ def get_context_text(repo_root: Path | None = None) -> str:
         ),
     )
 
-    # Current task
-    lines.append("## CURRENT TASK")
+    # 当前任务
+    lines.append("## 当前任务")
     current_task = get_current_task(repo_root)
     if current_task:
         current_task_dir = repo_root / current_task
         source_type, context_key, _ = get_current_task_source(repo_root)
-        lines.append(f"Path: {current_task}")
+        lines.append(f"路径：{current_task}")
         lines.append(
-            f"Source: {source_type}" + (f":{context_key}" if context_key else "")
+            f"来源：{source_type}" + (f":{context_key}" if context_key else "")
         )
 
         ct = load_task(current_task_dir)
         if ct:
-            lines.append(f"Name: {ct.name}")
-            lines.append(f"Status: {ct.status}")
-            lines.append(f"Created: {ct.raw.get('createdAt', 'unknown')}")
+            lines.append(f"名称：{ct.name}")
+            lines.append(f"状态：{ct.status}")
+            lines.append(f"创建时间：{ct.raw.get('createdAt', 'unknown')}")
             if ct.description:
-                lines.append(f"Description: {ct.description}")
+                lines.append(f"描述：{ct.description}")
 
-        # Check for prd.md
+        # 检查 prd.md
         prd_file = current_task_dir / "prd.md"
         if prd_file.is_file():
             lines.append("")
-            lines.append("[!] This task has prd.md - read it for task details")
+            lines.append("[!] 此任务有 prd.md — 请阅读它来了解任务详情")
     else:
-        lines.append("(none)")
+        lines.append("（无）")
     lines.append("")
 
-    # Active tasks
-    lines.append("## ACTIVE TASKS")
+    # 活动任务
+    lines.append("## 活动任务")
     tasks_dir = get_tasks_dir(repo_root)
     task_count = 0
 
-    # Collect all task data for hierarchy display
+    # 收集所有任务数据以展示层级结构
     all_tasks = {t.dir_name: t for t in iter_active_tasks(tasks_dir)}
     all_statuses = {name: t.status for name, t in all_tasks.items()}
 
@@ -600,12 +600,12 @@ def get_context_text(repo_root: Path | None = None) -> str:
             _print_task_tree(dir_name)
 
     if task_count == 0:
-        lines.append("(no active tasks)")
-    lines.append(f"Total: {task_count} active task(s)")
+        lines.append("（无活动任务）")
+    lines.append(f"总计：{task_count} 个活动任务")
     lines.append("")
 
-    # My tasks
-    lines.append("## MY TASKS (Assigned to me)")
+    # 我的任务
+    lines.append("## 我的任务（分配给我的）")
     my_task_count = 0
 
     for t in all_tasks.values():
@@ -615,34 +615,34 @@ def get_context_text(repo_root: Path | None = None) -> str:
             my_task_count += 1
 
     if my_task_count == 0:
-        lines.append("(no tasks assigned to you)")
+        lines.append("（没有分配给您的任务）")
     lines.append("")
 
-    # Journal file
-    lines.append("## JOURNAL FILE")
+    # 日志文件
+    lines.append("## 日志文件")
     journal_file = get_active_journal_file(repo_root)
     if journal_file:
         journal_lines = count_lines(journal_file)
         relative = f"{DIR_WORKFLOW}/{DIR_WORKSPACE}/{developer}/{journal_file.name}"
-        lines.append(f"Active file: {relative}")
-        lines.append(f"Line count: {journal_lines} / 2000")
+        lines.append(f"活动文件：{relative}")
+        lines.append(f"行数：{journal_lines} / 2000")
         if journal_lines > 1800:
-            lines.append("[!] WARNING: Approaching 2000 line limit!")
+            lines.append("[!] 警告：接近 2000 行限制！")
     else:
-        lines.append("No journal file found")
+        lines.append("未找到日志文件")
     lines.append("")
 
-    # Packages
+    # 软件包
     packages_text = get_packages_section(repo_root)
     if packages_text:
         lines.append(packages_text)
         lines.append("")
 
-    # Paths
-    lines.append("## PATHS")
-    lines.append(f"Workspace: {DIR_WORKFLOW}/{DIR_WORKSPACE}/{developer}/")
-    lines.append(f"Tasks: {DIR_WORKFLOW}/{DIR_TASKS}/")
-    lines.append(f"Spec: {DIR_WORKFLOW}/{DIR_SPEC}/")
+    # 路径
+    lines.append("## 路径")
+    lines.append(f"工作区：{DIR_WORKFLOW}/{DIR_WORKSPACE}/{developer}/")
+    lines.append(f"任务：{DIR_WORKFLOW}/{DIR_TASKS}/")
+    lines.append(f"规范：{DIR_WORKFLOW}/{DIR_SPEC}/")
     lines.append("")
 
     lines.append("========================================")
@@ -651,13 +651,13 @@ def get_context_text(repo_root: Path | None = None) -> str:
 
 
 # =============================================================================
-# Record Mode
+# 记录模式
 # =============================================================================
 
 def get_context_record_json(repo_root: Path | None = None) -> dict:
-    """Get record-mode context as a dictionary.
+    """以字典形式获取记录模式的上下文。
 
-    Focused on: my active tasks, git status, current task.
+    重点关注：我的活动任务、git 状态、当前任务。
     """
     if repo_root is None:
         repo_root = get_repo_root()
@@ -667,7 +667,7 @@ def get_context_record_json(repo_root: Path | None = None) -> dict:
 
     root_git_info = _collect_root_git_info(repo_root)
 
-    # My tasks (single pass — collect statuses and filter by assignee)
+    # 我的任务（单次遍历 — 收集状态并按负责人过滤）
     all_tasks_list = list(iter_active_tasks(tasks_dir))
     all_statuses = {t.dir_name: t.status for t in all_tasks_list}
 
@@ -689,7 +689,7 @@ def get_context_record_json(repo_root: Path | None = None) -> dict:
                 "meta": t.meta,
             })
 
-    # Current task
+    # 当前任务
     current_task_info = None
     current_task = get_current_task(repo_root)
     if current_task:
@@ -704,7 +704,7 @@ def get_context_record_json(repo_root: Path | None = None) -> dict:
                 "contextKey": context_key,
             }
 
-    # Package git repos
+    # 软件包 Git 仓库
     pkg_git_info = _collect_package_git_info(
         repo_root,
         discover_unconfigured=not root_git_info["isRepo"],
@@ -730,36 +730,36 @@ def get_context_record_json(repo_root: Path | None = None) -> dict:
 
 
 def get_context_text_record(repo_root: Path | None = None) -> str:
-    """Get context as formatted text for record-session mode.
+    """以格式化文本形式获取记录会话模式的上下文。
 
-    Focused output: MY ACTIVE TASKS first (with [!!!] emphasis),
-    then GIT STATUS, RECENT COMMITS, CURRENT TASK.
+    重点输出：首先是"我的活动任务"（带 [!!!] 强调），
+    然后是 GIT 状态、最近提交、当前任务。
     """
     if repo_root is None:
         repo_root = get_repo_root()
 
     lines: list[str] = []
     lines.append("========================================")
-    lines.append("SESSION CONTEXT (RECORD MODE)")
+    lines.append("会话上下文（记录模式）")
     lines.append("========================================")
     lines.append("")
 
     developer = get_developer(repo_root)
     if not developer:
         lines.append(
-            f"ERROR: Not initialized. Run: py -3 ./{DIR_WORKFLOW}/{DIR_SCRIPTS}/init_developer.py <name>"
+            f"错误：未初始化。运行：py -3 ./{DIR_WORKFLOW}/{DIR_SCRIPTS}/init_developer.py <名称>"
         )
         return "\n".join(lines)
 
-    # MY ACTIVE TASKS — first and prominent
-    lines.append(f"## [!!!] MY ACTIVE TASKS (Assigned to {developer})")
-    lines.append("[!] Review whether any should be archived before recording this session.")
+    # 我的活动任务 — 最先展示且置于显著位置
+    lines.append(f"## [!!!] 我的活动任务（分配给 {developer}）")
+    lines.append("[!] 在记录本次会话之前，请检查是否有任务需要归档。")
     lines.append("")
 
     tasks_dir = get_tasks_dir(repo_root)
     my_task_count = 0
 
-    # Single pass — collect all tasks and filter by assignee
+    # 单次遍历 — 收集所有任务并按负责人过滤
     all_statuses = get_all_statuses(tasks_dir)
 
     for t in iter_active_tasks(tasks_dir):
@@ -769,13 +769,13 @@ def get_context_text_record(repo_root: Path | None = None) -> str:
             my_task_count += 1
 
     if my_task_count == 0:
-        lines.append("(no active tasks assigned to you)")
+        lines.append("（没有分配给您的活动任务）")
     lines.append("")
 
     root_git_info = _collect_root_git_info(repo_root)
     _append_root_git_context(lines, root_git_info)
 
-    # Package git repos — independent sub-repositories
+    # 软件包 Git 仓库 — 独立子仓库
     _append_package_git_context(
         lines,
         _collect_package_git_info(
@@ -784,21 +784,21 @@ def get_context_text_record(repo_root: Path | None = None) -> str:
         ),
     )
 
-    # CURRENT TASK
-    lines.append("## CURRENT TASK")
+    # 当前任务
+    lines.append("## 当前任务")
     current_task = get_current_task(repo_root)
     if current_task:
         source_type, context_key, _ = get_current_task_source(repo_root)
-        lines.append(f"Path: {current_task}")
+        lines.append(f"路径：{current_task}")
         lines.append(
-            f"Source: {source_type}" + (f":{context_key}" if context_key else "")
+            f"来源：{source_type}" + (f":{context_key}" if context_key else "")
         )
         ct = load_task(repo_root / current_task)
         if ct:
-            lines.append(f"Name: {ct.name}")
-            lines.append(f"Status: {ct.status}")
+            lines.append(f"名称：{ct.name}")
+            lines.append(f"状态：{ct.status}")
     else:
-        lines.append("(none)")
+        lines.append("（无）")
     lines.append("")
 
     lines.append("========================================")
@@ -807,10 +807,10 @@ def get_context_text_record(repo_root: Path | None = None) -> str:
 
 
 def output_text(repo_root: Path | None = None) -> None:
-    """Output context in text format.
+    """以文本格式输出上下文。
 
     Args:
-        repo_root: Repository root path. Defaults to auto-detected.
+        repo_root: 仓库根目录路径。默认为自动检测。
     """
     if repo_root is None:
         repo_root = get_repo_root()

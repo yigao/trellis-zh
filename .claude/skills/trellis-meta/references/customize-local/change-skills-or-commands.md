@@ -1,26 +1,26 @@
-# Change Local Skills, Commands, Prompts, And Workflows
+# 更改本地 skill、command、prompt 和 workflow
 
-When the user wants to change AI entry points, auto-trigger rules, or explicit command behavior, edit skills, commands, prompts, or workflows in local platform directories.
+当用户想要更改 AI 入口点、自动触发规则或显式命令行为时，编辑本地平台目录中的 skill、command、prompt 或 workflow。
 
-## Read These Files First
+## 首先读取这些文件
 
 1. `.trellis/workflow.md`
-2. Target platform skill/command/prompt/workflow directory
-3. Related agent or hook files
-4. Whether project rules already exist in `.trellis/spec/`
+2. 目标平台 skill/command/prompt/workflow 目录
+3. 相关的 agent 或 hook 文件
+4. `.trellis/spec/` 中是否已存在项目规则
 
-## Which Entry Type To Choose
+## 选择哪种入口类型
 
-| Goal | Recommendation |
+| 目标 | 建议 |
 | --- | --- |
-| AI should automatically know a capability | Add or modify a skill. |
-| User wants to trigger manually with a command | Add or modify a command/prompt/workflow. |
-| Team project conventions | Prefer `.trellis/spec/` or a project-local skill. |
-| Change Trellis flow semantics | Synchronize `.trellis/workflow.md`. |
+| AI 应自动知晓某项能力 | 添加或修改 skill。 |
+| 用户希望通过 command 手动触发 | 添加或修改 command/prompt/workflow。 |
+| 团队项目惯例 | 优先使用 `.trellis/spec/` 或项目本地 skill。 |
+| 更改 Trellis 工作流语义 | 同步 `.trellis/workflow.md`。 |
 
-## Modify A Skill
+## 修改 skill
 
-A skill is usually:
+Skill 通常为：
 
 ```text
 <skill-name>/
@@ -28,51 +28,51 @@ A skill is usually:
 └── references/
 ```
 
-`SKILL.md` should be short and responsible for triggering/routing. Put long content in `references/` so AI can read it on demand.
+`SKILL.md` 应简短，负责触发/路由。将长篇内容放在 `references/` 中，以便 AI 按需读取。
 
-The frontmatter description should specify when to use the skill. Example:
+frontmatter 中的 description 应指定何时使用该 skill。示例：
 
 ```yaml
 description: "Use when customizing this project's deployment workflow and release checklist."
 ```
 
-Do not write vague descriptions such as "helpful project skill"; they can trigger incorrectly.
+不要编写模糊的描述，如"helpful project skill"；它们可能会被错误触发。
 
-## Modify A Command/Prompt/Workflow
+## 修改 command/prompt/workflow
 
-Explicit entry points should state:
+显式入口点应说明：
 
-- How the user triggers it.
-- Which `.trellis/` files to read.
-- Which scripts to run.
-- How to report after completion.
+- 用户如何触发它。
+- 需要读取哪些 `.trellis/` 文件。
+- 需要运行哪些脚本。
+- 完成后如何报告。
 
-If a command only repeats workflow rules, prefer making it reference/read `.trellis/workflow.md` instead of maintaining a second copy of the flow.
+如果某个 command 仅仅重复 workflow 规则，最好让它引用/读取 `.trellis/workflow.md`，而不是维护一份流程的副本。
 
-## Common Paths
+## 常见路径
 
-| Platform | Entry directories |
+| 平台 | 入口目录 |
 | --- | --- |
-| Claude Code | `.claude/skills/`, `.claude/commands/` |
-| Cursor | `.cursor/skills/`, `.cursor/commands/` |
-| OpenCode | `.opencode/skills/`, `.opencode/commands/` |
-| Codex | `.agents/skills/`, `.codex/skills/` |
-| GitHub Copilot | `.github/skills/`, `.github/prompts/` |
+| Claude Code | `.claude/skills/`、`.claude/commands/` |
+| Cursor | `.cursor/skills/`、`.cursor/commands/` |
+| OpenCode | `.opencode/skills/`、`.opencode/commands/` |
+| Codex | `.agents/skills/`、`.codex/skills/` |
+| GitHub Copilot | `.github/skills/`、`.github/prompts/` |
 | Kilo / Antigravity / Windsurf | workflows + skills |
 
-## Add A Project-Local Skill
+## 添加项目本地 skill
 
-If the user wants to document team-private customizations, create a project-local skill, for example:
+如果用户想要记录团队私有自定义内容，请创建项目本地 skill，例如：
 
 ```text
 .claude/skills/project-trellis-local/
 └── SKILL.md
 ```
 
-For multi-platform projects, add equivalent versions in each platform skill directory, or use `.agents/skills/` on platforms that support the shared layer.
+对于多平台项目，在每个平台 skill 目录中添加等效版本，或对于支持共享层的平台使用 `.agents/skills/`。
 
-## Notes
+## 注意事项
 
-- Do not mix every platform's syntax into one file.
-- Do not change only one platform entry point while claiming all platforms are supported.
-- Do not hide long-term engineering conventions inside a command; write them to `.trellis/spec/`.
+- 不要将每种平台的语法混入一个文件。
+- 不要在声称支持所有平台的同时仅更改一个平台的入口点。
+- 不要将长期工程惯例隐藏在 command 中；将其写入 `.trellis/spec/`。

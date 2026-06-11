@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Get Session Context for AI Agent.
+获取 AI 智能体的会话上下文。
 
-Usage:
-    py -3 get_context.py           Output context in text format
-    py -3 get_context.py --json    Output context in JSON format
+用法：
+    py -3 get_context.py           以文本格式输出上下文
+    py -3 get_context.py --json    以 JSON 格式输出上下文
 """
 
 from __future__ import annotations
